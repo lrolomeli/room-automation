@@ -656,6 +656,77 @@ body {
 }
 .rm-date-input:focus { border-color: #6c63ff; }
 
+/* ===== Login =========================================================== */
+.cl-login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cl-login-card {
+  width: 100%;
+  max-width: 340px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(108, 99, 255, 0.35);
+  border-radius: 16px;
+  padding: 28px 24px;
+}
+.cl-login-title { color: white; font-size: 1.6em; font-weight: 300; text-align: center; }
+.cl-login-sub {
+  color: rgba(255,255,255,0.55);
+  font-size: 0.85em;
+  text-align: center;
+  margin: 6px 0 20px;
+}
+.cl-login-form { display: flex; flex-direction: column; gap: 14px; }
+.cl-login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: rgba(255,255,255,0.7);
+  font-size: 0.85em;
+}
+.cl-login-field input {
+  padding: 11px 14px;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.08);
+  color: white;
+  font-size: 1em;
+  font-family: inherit;
+  outline: none;
+}
+.cl-login-field input:focus { border-color: #6c63ff; }
+.cl-login-submit {
+  margin-top: 4px;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(108, 99, 255, 0.8);
+  color: white;
+  font-size: 1em;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.cl-login-submit:hover:not(:disabled) { background: rgba(108, 99, 255, 1); }
+.cl-login-submit:disabled { opacity: 0.6; cursor: default; }
+
+.cl-logout {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 6px 14px;
+  background: rgba(255,255,255,0.15);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 20px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.cl-logout:hover { background: rgba(255,255,255,0.25); }
+
 @media (max-width: 480px) {
   body { padding: 12px; }
   .ir-temp-value { font-size: 2em; min-width: 90px; }

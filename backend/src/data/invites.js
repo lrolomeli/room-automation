@@ -1,8 +1,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const DATA_DIR = path.join(__dirname, '.', '');
-console.log(DATA_DIR);
+const DATA_DIR = path.join(__dirname, '../..', 'data');
 
 const INVITES_FILE = path.join(DATA_DIR, 'invites.json');
 

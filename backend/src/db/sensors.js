@@ -24,6 +24,8 @@ module.exports = {
   insertReading(temperature, humidity, unit = 'celsius', timestamp, source = 'auto') {
     const ts = timestamp || new Date().toISOString();
     db.run('sensors', 'INSERT INTO readings (temperature, humidity, unit, timestamp, source) VALUES (?, ?, ?, ?, ?)', [temperature, humidity, unit, ts, source]);
+    const row = db.queryOne('sensors', 'SELECT last_insert_rowid() AS id');
+    return { lastID: row ? row.id : null };
   },
 
   getLatest() {

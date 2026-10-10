@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const app = require('./app');
 const cron = require('node-cron');
 const climate = require('./automation/climate');

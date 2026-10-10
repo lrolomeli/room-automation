@@ -9,14 +9,24 @@ const TABS = [
   { id: 'auto', label: 'Automatización' },
 ];
 
-export default function ClimateApp() {
+export default function ClimateApp({ user, onLogout }) {
   const [tab, setTab] = useState('control');
 
   return (
     <div className="cl-app">
       <div className="cl-header">
-        <a href="/" className="cl-home">← Home</a>
+        <a href="https://luisrlp.com" className="cl-home">← Home</a>
         <h1>Aire</h1>
+        {onLogout && (
+          <button
+            type="button"
+            className="cl-logout"
+            onClick={onLogout}
+            title={user?.username ? `Sesión de ${user.username}` : 'Cerrar sesión'}
+          >
+            Salir
+          </button>
+        )}
       </div>
 
       <div className="cl-tabs">
