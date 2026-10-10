@@ -1,0 +1,14 @@
+{
+  "invites": [
+    {
+      "id": "ad821e020f8236d0",
+      "tokenHash": "32ca0b34373964555b4d6c94413d4ab0ca0d8b389953598b502a7d3ba2250899",
+      "label": "",
+      "createdAt": "2026-04-22T06:09:57.831Z",
+      "expiresAt": null,
+      "maxUses": null,
+      "usedCount": 0,
+      "revoked": false
+    }
+  ]
+}
