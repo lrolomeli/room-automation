@@ -26,10 +26,14 @@ backend/   # Express + node-cron + sql.js
     automation/ac-timer.js  # temporizador una-vez / bucle
     db/sensors.js       # lecturas de sensores (SQLite vía sql.js)
   data/                 # persistencia runtime
-frontend/  # Vite + React
+frontend/  # Vite + React + Tailwind v4
   src/
-    ClimateApp.jsx      # shell con pestañas Monitor | Control | Automatización
-    views/ components/
+    Dashboard.jsx       # dashboard único: Ahora | Control | Automatización | Historial
+    sections/           # NowSection, ControlSection, TimerSection, AutomationSection, HistorySection
+    components/ui/      # primitivas (Card, Banner, SegmentedControl, Stepper, Switch, ...)
+    components/chart/   # LineChart (Chart.js vía react-chartjs-2)
+    hooks/ lib/ context/
+    index.css           # Tailwind (@import + @theme)
   Dockerfile, nginx.conf, vite.config.js
 ```
 
@@ -70,7 +74,7 @@ CLIMATE_TZ=America/Mexico_City
 docker compose up -d --build
 ```
 
-Sirve la UI en `http://localhost:8080` y proxya `/api` al backend.
+Sirve la UI en `http://localhost:8084` y proxya `/api` al backend.
 
 ## Auth
 
