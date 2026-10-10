@@ -16,6 +16,10 @@ services:
       - ./backend/data:/app/data
     environment:
       - PORT=3000
+      - SESSION_SECRET=${SESSION_SECRET:-change_me_to_a_long_random_string}
+      - COOKIE_SECURE=${COOKIE_SECURE:-false}
+      - ADMIN_USER=${ADMIN_USER:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-change_me}
       - ESP_HOST=${ESP_HOST:-192.168.100.239}
       - ESP_PORT=${ESP_PORT:-80}
       - CLIMATE_TZ=${CLIMATE_TZ:-America/Mexico_City}

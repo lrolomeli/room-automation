@@ -1,12 +1,15 @@
 const { Router } = require("express");
 const router = Router();
 
+const ADMIN_USER = process.env.ADMIN_USER || "admin";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "1234";
+
 // 🔑 login
 router.post("/login", (req, res) => {
   const { username, password } = req.body;
 
   // ⚠️ replace later with DB + hashed password
-  if (username === "admin" && password === "1234") {
+  if (username === ADMIN_USER && password === ADMIN_PASSWORD) {
     req.session.user = { username };
     return res.json({ success: true });
   }

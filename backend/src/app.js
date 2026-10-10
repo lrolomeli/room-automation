@@ -12,17 +12,20 @@ const acTimerRoutes = require('./routes/ac-timer-routes');
 
 const app = express();
 
+const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-insecure-secret-change-me';
+const COOKIE_SECURE = process.env.COOKIE_SECURE === 'true';
+
 app.use(limiter);
 app.use(express.json());
 
 // 🔐 session setup
 app.use(session({
-  secret: "super-secret-key",
+  secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    secure: false,
+    secure: COOKIE_SECURE,
     maxAge: 30 * 24 * 60 * 60 * 1000
   }
 }));

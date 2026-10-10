@@ -47,12 +47,22 @@ npm run dev --prefix frontend         # http://localhost:5173
 
 ## Variables de entorno (backend)
 
+Copia `backend/.env.example` a `backend/.env` (o define las variables en el
+entorno / `docker-compose`):
+
 ```
 PORT=3000
+SESSION_SECRET=change_me_to_a_long_random_string
+COOKIE_SECURE=false
+ADMIN_USER=admin
+ADMIN_PASSWORD=change_me
 ESP_HOST=192.168.100.239
 ESP_PORT=80
 CLIMATE_TZ=America/Mexico_City
 ```
+
+> En desarrollo hay valores por defecto inseguros (`SESSION_SECRET`,
+> `ADMIN_PASSWORD`). Cámbialos siempre en producción.
 
 ## Deploy (Docker)
 
