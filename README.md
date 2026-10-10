@@ -71,6 +71,12 @@ CLIMATE_TZ=America/Mexico_City
 ## Deploy (Docker)
 
 ```bash
+./deploy.sh          # git pull + rebuild + up
+```
+
+O manualmente:
+
+```bash
 docker compose up -d --build
 ```
 
