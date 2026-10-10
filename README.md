@@ -47,8 +47,8 @@ npm run dev --prefix frontend         # http://localhost:5173
 
 ## Variables de entorno (backend)
 
-Copia `backend/.env.example` a `backend/.env` (o define las variables en el
-entorno / `docker-compose`):
+Copia `backend/.env.example` a `backend/.env`. Docker Compose lo carga
+automáticamente vía `env_file` (servicio `backend`):
 
 ```
 PORT=3000
