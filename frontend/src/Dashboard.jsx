@@ -17,7 +17,12 @@ export default function Dashboard() {
           >
             ← Inicio
           </a>
-          <h1 className="text-lg font-light text-white">Aire</h1>
+          <h1 className="text-base font-light text-white">
+            Habitación{' '}
+            <span className="bg-gradient-to-r from-accent-soft to-hum bg-clip-text font-semibold text-transparent">
+              LuisRLP
+            </span>
+          </h1>
           <button
             type="button"
             onClick={logout}
