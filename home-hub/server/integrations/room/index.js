@@ -129,13 +129,14 @@ function stop() {
 }
 
 async function setAc(partial) {
-  const state = await applyAcState(partial || {});
+  await applyAcState(partial || {});
   if (acTimer.status().active) {
     await acTimer.stop({ turnOff: false });
   }
   climate.noteManualOverride();
   emit('room.status', status());
-  return state;
+  // El frontend espera el mismo formato que /api/room/status (valid, *_raw).
+  return acState.serialize();
 }
 
 async function startTimer(options) {

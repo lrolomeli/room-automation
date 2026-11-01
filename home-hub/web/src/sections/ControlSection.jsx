@@ -153,13 +153,10 @@ export default function ControlSection() {
     setError('');
     setNotice('');
     try {
-      const data = await api.post('/api/room/ac', draft);
-      const mapped = mapState(data.state);
-      if (mapped) {
-        setApplied(mapped);
-        setDraft(mapped);
-      }
-      setHasState(true);
+      await api.post('/api/room/ac', draft);
+      // Recargar el estado canónico: evita depender de la forma del POST
+      // y hace que "Aplicar" desaparezca al confirmar.
+      await load();
       setNotice('Comando enviado');
     } catch (err) {
       setError(`No se pudo enviar: ${err.message}`);

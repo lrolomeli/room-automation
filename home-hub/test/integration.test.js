@@ -228,8 +228,10 @@ test('flujo completo: MQTT, automatización, comandos y ESP32 simulado', async (
     body: JSON.stringify({ power: true, temp: 23, mode: 'cool', fan: 'med' }),
   });
   assert.equal(ac.response.status, 200);
+  assert.equal(ac.body.state.valid, true);
   assert.equal(ac.body.state.power, true);
   assert.equal(ac.body.state.temp, 23);
+  assert.equal(ac.body.state.mode_raw, 1);
 
   const timer = await api('/api/room/timer/start', {
     method: 'POST',
