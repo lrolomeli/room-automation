@@ -20,7 +20,7 @@ rules:
     when: { device: motion-2, property: occupancy, equals: false }
     then: { device: relay-2, state: "OFF" }
 
-  - id: button-1-off-relay-1
+  - id: button-1-toggle-relay-1
     when: { device: button-1, property: action, equals: single }
-    then: { device: relay-1, state: "OFF" }
+    then: { device: relay-1, state: "TOGGLE" }
     cooldownMs: 500

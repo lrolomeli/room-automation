@@ -140,14 +140,16 @@ rules:
     then: { device: relay-1, state: "ON" }
 
   # Pulsador: una pulsación simple apaga un relé.
-  - id: button-1-off
+  - id: button-1-toggle
     when: { device: button-1, property: action, equals: single }
-    then: { device: relay-1, state: "OFF" }
+    then: { device: relay-1, state: "TOGGLE" }
     cooldownMs: 500
 ```
 
 - Las reglas con `property: action` disparan en **cada pulsación**, aunque la
   acción se repita (`single` varias veces).
+- `state: "TOGGLE"` alterna: si el relé está `ON`, manda `OFF`; si está `OFF`,
+  manda `ON`.
 - `AUTOMATION_MODE=shadow`: solo registra lo que haría.
 - `AUTOMATION_MODE=live`: envía el comando al relé.
 

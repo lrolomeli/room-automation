@@ -40,7 +40,9 @@ function loadRules() {
         },
         then: {
           device: String(rule.then.device || ''),
-          state: rule.then.state === 'ON' || rule.then.state === 'OFF' ? rule.then.state : '',
+          state: ['ON', 'OFF', 'TOGGLE'].includes(String(rule.then.state || '').toUpperCase())
+            ? String(rule.then.state).toUpperCase()
+            : '',
         },
         cooldownMs: Number(rule.cooldownMs) || DEFAULT_COOLDOWN_MS,
       }))
@@ -79,23 +81,31 @@ function execute(rule) {
     });
     return;
   }
+
+  const desiredState =
+    rule.then.state === 'TOGGLE'
+      ? target.state === 'ON'
+        ? 'OFF'
+        : 'ON'
+      : rule.then.state;
+
   if (mode === 'shadow') {
     addLog({
       rule: rule.id,
       ok: true,
       shadow: true,
-      detail: `[shadow] ${target.name} -> ${rule.then.state}`,
+      detail: `[shadow] ${target.name} -> ${desiredState}`,
     });
     return;
   }
   addLog({
     rule: rule.id,
     ok: true,
-    detail: `${target.name} -> ${rule.then.state}`,
+    detail: `${target.name} -> ${desiredState}`,
   });
   bus.emit('zigbee.command.request', {
     deviceId: target.ieee,
-    state: rule.then.state,
+    state: desiredState,
     source: rule.id,
   });
 }

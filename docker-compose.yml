@@ -47,6 +47,8 @@ services:
       - "8084:3000"
     volumes:
       - ./home-hub/data:/app/data
+      # Reglas editables sin reconstruir la imagen.
+      - ./home-hub/config:/app/config
     depends_on:
       - mqtt
     healthcheck:

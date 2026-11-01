@@ -67,9 +67,11 @@ test('carga las 5 reglas y dispara en modo shadow sin publicar comandos', () => 
   assert.ok(after.log.some((entry) => String(entry.detail || '').includes('relay-1 -> ON')));
 });
 
-test('dispara reglas action en cada pulsación aunque la acción se repita', async () => {
+test('toggle alterna el relé en cada pulsación aunque la acción se repita', async () => {
   registry.applyBridgeDevices(DEVICES);
   automations.init();
+
+  registry.applyState('relay-1', { state: 'ON' });
 
   const first = registry.applyState('button-1', { action: 'single', linkquality: 100 });
   bus.emit('zigbee.device.update', {
@@ -79,6 +81,7 @@ test('dispara reglas action en cada pulsación aunque la acción se repita', asy
 
   await new Promise((resolve) => setTimeout(resolve, 650));
 
+  registry.applyState('relay-1', { state: 'OFF' });
   const second = registry.applyState('button-1', { action: 'single', linkquality: 100 });
   bus.emit('zigbee.device.update', {
     ...second,
@@ -87,9 +90,8 @@ test('dispara reglas action en cada pulsación aunque la acción se repita', asy
 
   const entries = automations
     .status()
-    .log.filter((entry) => entry.rule === 'button-1-off-relay-1');
+    .log.filter((entry) => entry.rule === 'button-1-toggle-relay-1');
   assert.equal(entries.length, 2);
-  assert.ok(
-    entries.every((entry) => String(entry.detail || '').includes('[shadow] relay-1 -> OFF')),
-  );
+  assert.ok(entries.some((entry) => String(entry.detail || '').includes('[shadow] relay-1 -> OFF')));
+  assert.ok(entries.some((entry) => String(entry.detail || '').includes('[shadow] relay-1 -> ON')));
 });
