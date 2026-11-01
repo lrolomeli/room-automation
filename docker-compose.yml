@@ -24,9 +24,9 @@ services:
       - ./zigbee-stack/zigbee2mqtt:/app/data
       - /run/udev:/run/udev:ro
     ports:
-      # Solo accesible desde la propia máquina (SSH tunnel / VPN).
-      # No lo expongas directamente a Internet.
-      - "127.0.0.1:8080:8080"
+      # UI de administración en la LAN. No la expongas a Internet:
+      # Zigbee2MQTT no tiene login por defecto.
+      - "8080:8080"
     environment:
       - TZ=America/Chicago
     devices:
@@ -42,8 +42,9 @@ services:
     env_file:
       - ./home-hub/.env
     ports:
-      # Solo loopback: el reverse proxy de ra.luisrlp.com entra por aquí.
-      - "127.0.0.1:8084:3000"
+      # Hub accesible en la LAN (con login). El reverse proxy de
+      # ra.luisrlp.com también puede entrar por 127.0.0.1:8084.
+      - "8084:3000"
     volumes:
       - ./home-hub/data:/app/data
     depends_on:

@@ -12,6 +12,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT_DIR"
 
+LAN_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+
 HUB_ONLY=0
 if [ "${1:-}" = "--hub-only" ]; then
   HUB_ONLY=1
@@ -64,9 +66,12 @@ fi
 
 echo
 echo "Listo."
-echo "  Hub:          http://localhost:8084"
+echo "  Hub local:    http://localhost:8084"
+if [ -n "$LAN_IP" ]; then
+  echo "  Hub LAN:      http://$LAN_IP:8084"
+fi
 if [ "$HUB_ONLY" = "0" ]; then
-  echo "  Zigbee2MQTT:  http://127.0.0.1:8080 (LAN / VPN / SSH tunnel)"
+  echo "  Zigbee2MQTT:  http://localhost:8080${LAN_IP:+  |  http://$LAN_IP:8080}"
 fi
 echo
 echo "Producción: publica el hub detrás de tu reverse proxy HTTPS en ra.luisrlp.com."

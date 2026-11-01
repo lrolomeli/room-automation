@@ -81,7 +81,7 @@ home-hub (un contenedor: frontend + backend)
 
 5. Abre:
    - Hub: `http://localhost:8084`
-   - Zigbee2MQTT: `http://127.0.0.1:8080` (solo LAN/VPN/SSH tunnel)
+   - Zigbee2MQTT: `http://<IP_DEL_SERVIDOR>:8080` (LAN, sin login)
 
 Para parar:
 
@@ -97,7 +97,8 @@ del proyecto. No hay que crear redes externas.
 - `mqtt` es el nombre de servicio del broker; el hub y Z2M usan
   `mqtt://mqtt:1883`.
 - Mosquitto **no publica 1883** al host.
-- Zigbee2MQTT publica 8080 solo en `127.0.0.1`.
+- Zigbee2MQTT publica 8080 en la LAN. No lo expongas a Internet: su UI no tiene
+  login por defecto.
 - El hub habla directamente con el ESP32 (`ESP_HOST`), sin backend intermedio.
 
 Operaciones individuales:
@@ -214,8 +215,8 @@ npx tsc --noEmit   # typecheck
 
 ## Reverse proxy
 
-El hub sirve la PWA, la API y el WebSocket en `127.0.0.1:8084`. El reverse proxy
-de `ra.luisrlp.com` debe reenviar **también `/ws`** con upgrade:
+El hub sirve la PWA, la API y el WebSocket en `8084` (LAN y loopback). El
+reverse proxy de `ra.luisrlp.com` debe reenviar **también `/ws`** con upgrade:
 
 ```nginx
 location / {
@@ -236,7 +237,11 @@ Si el proxy reescribe el `Host`, define `ALLOWED_ORIGIN=https://ra.luisrlp.com`.
 ## Seguridad
 
 - Solo el hub debe estar expuesto a Internet, detrás de HTTPS y login.
-- No publiques MQTT (`1883`) ni Zigbee2MQTT (`8080`) al exterior.
+- El hub (`8084`) tiene login; puedes abrirlo en la LAN. Para Internet, usa
+  Cloudflare Tunnel o un reverse proxy con HTTPS.
+- La UI de Zigbee2MQTT (`8080`) **no tiene login por defecto**. Queda publicada
+  en la LAN para administración/pairing; no la expongas a Internet.
+- No publiques MQTT (`1883`) al exterior.
 - Usa una contraseña única y larga; si puedes, añade TOTP o Authelia en el
   reverse proxy.
 - `DASHBOARD_PASSWORD` y `SESSION_SECRET` son obligatorios.

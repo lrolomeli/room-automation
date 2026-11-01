@@ -22,8 +22,9 @@ O el stack completo:
 ```
 
 - **Mosquitto:** sin puerto público. Solo accesible por la red del compose.
-- **Zigbee2MQTT:** `http://127.0.0.1:8080` para administración/pairing.
-  No lo expongas a Internet; usa LAN, VPN o túnel SSH.
+- **Zigbee2MQTT:** `http://<IP_DEL_SERVIDOR>:8080` para administración/pairing.
+  No lo expongas a Internet: la UI no tiene login por defecto. Úsala solo en la
+  LAN o por VPN.
 - El dongle se monta como `/dev/ttyUSB0`.
 
 ## Configuración
