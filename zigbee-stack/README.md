@@ -28,14 +28,17 @@ O el stack completo:
 
 ## Configuración
 
-El `configuration.yaml` real está ignorado por git porque contiene la topología
-y los nombres de tus dispositivos. Parte del ejemplo:
+El `configuration.yaml` está versionado, pero **sin la network key**: solo
+referencia `!secret network_key`. Contiene la topología y los nombres de tus
+dispositivos.
+
+Si empiezas una red Zigbee nueva, puedes reemplazarlo por el ejemplo:
 
 ```bash
 cp zigbee2mqtt/configuration.example.yaml zigbee2mqtt/configuration.yaml
 ```
 
-En una instalación existente, ese archivo ya existe localmente y no se sube.
+La network key real vive en `zigbee2mqtt/secrets.yaml`, que está ignorado.
 
 ## Network key
 

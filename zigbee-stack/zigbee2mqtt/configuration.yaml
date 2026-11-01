@@ -1,0 +1,33 @@
+homeassistant:
+  # Home Assistant ya no se usa; el hub consume MQTT directamente.
+  enabled: false
+  name: Zigbee2MQTT
+mqtt:
+  base_topic: zigbee2mqtt
+  server: mqtt://mqtt:1883
+serial:
+  port: /dev/ttyUSB0
+  adapter: zstack
+frontend:
+  enabled: true
+  port: 8080
+  host: 0.0.0.0
+advanced:
+  log_level: info
+  # Necesario para mostrar la frescura de los sensores en el hub.
+  last_seen: ISO_8601
+  pan_id: 6754
+  channel: 11
+  network_key: !secret network_key
+version: 4
+devices:
+  '0xc4d8c8fffe1f02e9':
+    friendly_name: par-sw
+  '0xe406bffffee61fcd':
+    friendly_name: my-sw
+  '0xb43522fffed13173':
+    friendly_name: my-pre-s
+  '0xc4d8c8fffe1e7ddb':
+    friendly_name: par-pre-s
+  '0xd44867fffe0c3348':
+    friendly_name: zbbutton

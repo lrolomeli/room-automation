@@ -45,22 +45,25 @@ home-hub (un contenedor: frontend + backend)
 
 ## Arranque desde cero
 
-1. Copia los ejemplos:
+1. Copia los ejemplos que faltan:
 
    ```bash
    cp home-hub/.env.example home-hub/.env
    cp home-hub/config/automations.example.yaml home-hub/config/automations.yaml
-   cp zigbee-stack/zigbee2mqtt/configuration.example.yaml \
-      zigbee-stack/zigbee2mqtt/configuration.yaml
    cp zigbee-stack/zigbee2mqtt/secrets.yaml.example \
       zigbee-stack/zigbee2mqtt/secrets.yaml
    ```
+
+   `zigbee-stack/zigbee2mqtt/configuration.yaml` ya está versionado **sin la
+   network key**. Si vas a crear una red Zigbee nueva, puedes reemplazarlo por
+   `configuration.example.yaml`.
 
 2. Edita:
    - `home-hub/.env`: `DASHBOARD_PASSWORD`, `SESSION_SECRET`, `ESP_HOST`,
      `CLIMATE_TZ`.
    - `zigbee-stack/zigbee2mqtt/secrets.yaml`: tu `network_key` de 16 bytes.
    - `home-hub/config/automations.yaml`: tus dispositivos y reglas.
+   - `zigbee-stack/zigbee2mqtt/configuration.yaml` si cambian tus dispositivos.
 
 3. Verifica el dongle Zigbee en `/dev/ttyUSB0`.
 
@@ -113,14 +116,15 @@ Estos archivos son locales y están ignorados por git:
 - `home-hub/.env`
 - `home-hub/config/automations.yaml`
 - `home-hub/data/`
-- `zigbee-stack/zigbee2mqtt/configuration.yaml`
-- `zigbee-stack/zigbee2mqtt/secrets.yaml`
+- `zigbee-stack/zigbee2mqtt/secrets.yaml` (la network key)
 - `zigbee-stack/zigbee2mqtt/database.db`
 - `zigbee-stack/zigbee2mqtt/state.json`
 - `zigbee-stack/zigbee2mqtt/coordinator_backup.json`
 - `zigbee-stack/mosquitto/data/` y `zigbee-stack/mosquitto/log/`
 
-Solo se versionan los `.example.yaml`, `.env.example` y el código.
+`zigbee-stack/zigbee2mqtt/configuration.yaml` **sí se versiona**, pero sin la
+network key: solo referencia `!secret network_key`. Contiene los nombres e IEEE
+addresses de tus dispositivos; la clave real nunca se sube.
 
 ## Automatizaciones Zigbee
 
