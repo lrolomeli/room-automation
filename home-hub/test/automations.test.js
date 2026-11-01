@@ -38,14 +38,24 @@ const DEVICES = [
       ],
     },
   },
+  {
+    ieee_address: '0x0000000000000003',
+    friendly_name: 'button-1',
+    type: 'EndDevice',
+    definition: {
+      exposes: [
+        { type: 'enum', property: 'action', access: 1, values: ['single', 'double', 'hold'] },
+      ],
+    },
+  },
 ];
 
-test('carga las 4 reglas y dispara en modo shadow sin publicar comandos', () => {
+test('carga las 5 reglas y dispara en modo shadow sin publicar comandos', () => {
   registry.applyBridgeDevices(DEVICES);
   automations.init();
 
   const status = automations.status();
-  assert.equal(status.rules.length, 4);
+  assert.equal(status.rules.length, 5);
   assert.equal(status.mode, 'shadow');
 
   const update = registry.applyState('motion-1', { occupancy: true, linkquality: 90 });
@@ -55,4 +65,31 @@ test('carga las 4 reglas y dispara en modo shadow sin publicar comandos', () => 
   assert.ok(after.log.length > 0);
   assert.ok(after.log.some((entry) => String(entry.detail || '').includes('[shadow]')));
   assert.ok(after.log.some((entry) => String(entry.detail || '').includes('relay-1 -> ON')));
+});
+
+test('dispara reglas action en cada pulsación aunque la acción se repita', async () => {
+  registry.applyBridgeDevices(DEVICES);
+  automations.init();
+
+  const first = registry.applyState('button-1', { action: 'single', linkquality: 100 });
+  bus.emit('zigbee.device.update', {
+    ...first,
+    payload: { action: 'single', linkquality: 100 },
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 650));
+
+  const second = registry.applyState('button-1', { action: 'single', linkquality: 100 });
+  bus.emit('zigbee.device.update', {
+    ...second,
+    payload: { action: 'single', linkquality: 100 },
+  });
+
+  const entries = automations
+    .status()
+    .log.filter((entry) => entry.rule === 'button-1-off-relay-1');
+  assert.equal(entries.length, 2);
+  assert.ok(
+    entries.every((entry) => String(entry.detail || '').includes('[shadow] relay-1 -> OFF')),
+  );
 });

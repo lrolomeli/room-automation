@@ -100,17 +100,25 @@ function execute(rule) {
   });
 }
 
-function onDeviceUpdate({ device }) {
+function onDeviceUpdate({ device, payload }) {
   if (!device || rules.length === 0) return;
   for (const rule of rules) {
     if (!matchesDevice(rule, device)) continue;
     const value = getValue(device, rule.when.property);
     if (value === undefined) continue;
 
-    const previous = lastValues.get(rule.id);
-    lastValues.set(rule.id, value);
-    if (previous === value) continue;
-    if (value !== rule.when.equals) continue;
+    if (rule.when.property === 'action') {
+      // Los pulsadores repiten la misma acción; no esperamos un cambio
+      // de valor como en occupancy. Disparamos en cada mensaje con action.
+      if (!payload || !Object.prototype.hasOwnProperty.call(payload, 'action')) continue;
+      lastValues.set(rule.id, value);
+      if (value !== rule.when.equals) continue;
+    } else {
+      const previous = lastValues.get(rule.id);
+      lastValues.set(rule.id, value);
+      if (previous === value) continue;
+      if (value !== rule.when.equals) continue;
+    }
 
     const now = Date.now();
     const last = lastTriggered.get(rule.id) || 0;

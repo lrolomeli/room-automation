@@ -19,3 +19,8 @@ rules:
   - id: relay-2-off
     when: { device: motion-2, property: occupancy, equals: false }
     then: { device: relay-2, state: "OFF" }
+
+  - id: button-1-off-relay-1
+    when: { device: button-1, property: action, equals: single }
+    then: { device: relay-1, state: "OFF" }
+    cooldownMs: 500

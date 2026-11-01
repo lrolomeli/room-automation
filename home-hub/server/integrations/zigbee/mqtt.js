@@ -69,9 +69,12 @@ function handleMessage(topic, buffer) {
       });
     }
 
-    if (result.changed) {
+    // Un pulsador puede mandar la misma action varias veces; aunque
+    // `changed` sea false, hay que emitir para que la regla dispare.
+    const hasAction = Object.prototype.hasOwnProperty.call(payload, 'action');
+    if (result.changed || hasAction) {
       bus.emit('zigbee.device', result.device);
-      bus.emit('zigbee.device.update', result);
+      bus.emit('zigbee.device.update', { ...result, payload });
     }
     return;
   }

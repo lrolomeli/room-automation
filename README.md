@@ -138,8 +138,16 @@ rules:
   - id: relay-1-on
     when: { device: motion-1, property: occupancy, equals: true }
     then: { device: relay-1, state: "ON" }
+
+  # Pulsador: una pulsación simple apaga un relé.
+  - id: button-1-off
+    when: { device: button-1, property: action, equals: single }
+    then: { device: relay-1, state: "OFF" }
+    cooldownMs: 500
 ```
 
+- Las reglas con `property: action` disparan en **cada pulsación**, aunque la
+  acción se repita (`single` varias veces).
 - `AUTOMATION_MODE=shadow`: solo registra lo que haría.
 - `AUTOMATION_MODE=live`: envía el comando al relé.
 
