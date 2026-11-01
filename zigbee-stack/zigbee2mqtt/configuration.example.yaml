@@ -1,0 +1,25 @@
+# Copia este archivo a configuration.yaml.
+# El configuration.yaml real está ignorado por git para no publicar
+# nombres de dispositivos, IEEE addresses ni la topología de tu red.
+
+homeassistant:
+  enabled: false
+  name: Zigbee2MQTT
+mqtt:
+  base_topic: zigbee2mqtt
+  server: mqtt://mqtt:1883
+serial:
+  port: /dev/ttyUSB0
+  adapter: zstack
+frontend:
+  enabled: true
+  port: 8080
+  host: 0.0.0.0
+advanced:
+  log_level: info
+  last_seen: ISO_8601
+  pan_id: 6754
+  channel: 11
+  network_key: !secret network_key
+version: 4
+devices: {}

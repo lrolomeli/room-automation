@@ -1,8 +1,27 @@
+.env
 node_modules/
 dist/
-.env
 *.log
-backend/data/*.json
-backend/data/*.csv
-backend/data/*.db
-backend/src/data/invites.json
+
+# Hub
+home-hub/.env
+home-hub/node_modules/
+home-hub/dist/
+home-hub/data/*
+!home-hub/data/.gitkeep
+# Reglas reales (se versiona solo el ejemplo)
+home-hub/config/automations.yaml
+
+# Runtime / secretos de Zigbee
+zigbee-stack/mosquitto/data/
+zigbee-stack/mosquitto/log/
+zigbee-stack/zigbee2mqtt/log/
+zigbee-stack/zigbee2mqtt/database.db
+zigbee-stack/zigbee2mqtt/database.db.tmp.*
+zigbee-stack/zigbee2mqtt/state.json
+zigbee-stack/zigbee2mqtt/coordinator_backup.json
+zigbee-stack/zigbee2mqtt/*.log
+zigbee-stack/zigbee2mqtt/configuration_backup_*.yaml
+# Config real de la red (se versiona solo configuration.example.yaml)
+zigbee-stack/zigbee2mqtt/configuration.yaml
+zigbee-stack/zigbee2mqtt/secrets.yaml

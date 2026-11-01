@@ -1,0 +1,26 @@
+name: home-hub
+
+services:
+  hub:
+    build: .
+    container_name: home-hub
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      # Solo loopback: el reverse proxy de ra.luisrlp.com entra por aquí.
+      - "127.0.0.1:8084:3000"
+    volumes:
+      - ./data:/app/data
+    networks:
+      - default
+      - zigbee-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  zigbee-net:
+    external: true

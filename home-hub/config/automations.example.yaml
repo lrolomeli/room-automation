@@ -1,0 +1,21 @@
+# Copia este archivo a automations.yaml y cambia los nombres por los tuyos.
+# El automations.yaml real está ignorado por git.
+
+mode: shadow
+
+rules:
+  - id: relay-1-on
+    when: { device: motion-1, property: occupancy, equals: true }
+    then: { device: relay-1, state: "ON" }
+
+  - id: relay-1-off
+    when: { device: motion-1, property: occupancy, equals: false }
+    then: { device: relay-1, state: "OFF" }
+
+  - id: relay-2-on
+    when: { device: motion-2, property: occupancy, equals: true }
+    then: { device: relay-2, state: "ON" }
+
+  - id: relay-2-off
+    when: { device: motion-2, property: occupancy, equals: false }
+    then: { device: relay-2, state: "OFF" }

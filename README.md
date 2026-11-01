@@ -1,88 +1,242 @@
-# Room Automation
+# Casa LuisRLP — Home Hub
 
-App para monitorear el cuarto y controlar el aire acondicionado por el emisor IR
-del ESP32. **Proyecto independiente** dentro de este repo; está pensado para
-extraerse a su propio repositorio (objetivo: `ra.luisrlp.com`).
+Este repositorio nació como **room-automation** (clima del cuarto con ESP32).
+Ahora contiene el **hub unificado** para controlar los relés Zigbee y el clima
+de la habitación desde una sola PWA. La app anterior queda en el historial de
+git; ya no se despliega.
 
-## Funciones
+## Arquitectura
 
-- **Monitor** — temperatura y humedad en tiempo real, gráficas 24h, stats, heatmap y tendencias.
-- **Control** — edición del estado completo del aire y envío por IR. Incluye **temporizador**:
-  encender por N minutos y apagarse, o modo **bucle** (N min encendido / 15 min apagado)
-  hasta detenerlo.
-- **Automatización** — horarios, histeresis de humedad y lazo cerrado adaptativo.
+```
+Navegador / PWA
+  │ HTTPS + WebSocket
+  ▼
+home-hub (un contenedor: frontend + backend)
+  ├── MQTT ──► Mosquitto ──► Zigbee2MQTT ──► Relés / sensores Zigbee
+  └── HTTP ──► ESP32 (temperatura/humedad + IR del aire)
+```
+
+- **`zigbee-stack/`**: Mosquitto + Zigbee2MQTT. Compose independiente.
+- **`home-hub/`**: un único contenedor con Express, React/PWA, MQTT,
+  WebSocket, auth y el cliente del ESP32.
+- **`start.sh` / `stop.sh`**: arrancan/paran los dos stacks.
 
 ## Estructura
 
 ```
-backend/   # Express + node-cron + sql.js
-  src/
-    app.js              # Express; monta /api/auth, /api/sensors, /api/ir, /api/climate, /api/ac-timer
-    index.js            # arranque + cron (sensores, climate, temporizador)
-    esp.js              # cliente HTTP del ESP32
-    services/ac.js      # comando absoluto al ESP (commit solo si responde)
-    data/ac-state.js    # estado canónico del aire
-    automation/climate.js   # motor de horarios + lazo cerrado
-    automation/ac-timer.js  # temporizador una-vez / bucle
-    db/sensors.js       # lecturas de sensores (SQLite vía sql.js)
-  data/                 # persistencia runtime
-frontend/  # Vite + React + Tailwind v4
-  src/
-    Dashboard.jsx       # dashboard único: Ahora | Control | Automatización | Historial
-    sections/           # NowSection, ControlSection, TimerSection, AutomationSection, HistorySection
-    components/ui/      # primitivas (Card, Banner, SegmentedControl, Stepper, Switch, ...)
-    components/chart/   # LineChart (Chart.js vía react-chartjs-2)
-    hooks/ lib/ context/
-    index.css           # Tailwind (@import + @theme)
-  Dockerfile, nginx.conf, vite.config.js
+.
+├── zigbee-stack/
+│   ├── docker-compose.yml
+│   ├── mosquitto/
+│   └── zigbee2mqtt/
+├── home-hub/
+│   ├── server/               # Express, MQTT, WS, auth, integración ESP32
+│   ├── web/                  # React + Vite + Tailwind
+│   ├── config/
+│   │   ├── automations.example.yaml
+│   │   └── automations.yaml  # real, ignorado por git
+│   ├── data/                 # persistencia, ignorada por git
+│   ├── Dockerfile
+│   ├── docker-compose.yml
+│   └── .env.example
+├── start.sh
+└── stop.sh
 ```
 
-## Desarrollo
+## Arranque desde cero
+
+1. Copia los ejemplos:
+
+   ```bash
+   cp home-hub/.env.example home-hub/.env
+   cp home-hub/config/automations.example.yaml home-hub/config/automations.yaml
+   cp zigbee-stack/zigbee2mqtt/configuration.example.yaml \
+      zigbee-stack/zigbee2mqtt/configuration.yaml
+   cp zigbee-stack/zigbee2mqtt/secrets.yaml.example \
+      zigbee-stack/zigbee2mqtt/secrets.yaml
+   ```
+
+2. Edita:
+   - `home-hub/.env`: `DASHBOARD_PASSWORD`, `SESSION_SECRET`, `ESP_HOST`,
+     `CLIMATE_TZ`.
+   - `zigbee-stack/zigbee2mqtt/secrets.yaml`: tu `network_key` de 16 bytes.
+   - `home-hub/config/automations.yaml`: tus dispositivos y reglas.
+
+3. Verifica el dongle Zigbee en `/dev/ttyUSB0`.
+
+4. Arranca:
+
+   ```bash
+   ./start.sh
+   ```
+
+   Si no tienes el dongle y solo quieres probar la interfaz:
+
+   ```bash
+   ./start.sh --hub-only
+   ```
+
+5. Abre:
+   - Hub: `http://localhost:8084`
+   - Zigbee2MQTT: `http://127.0.0.1:8080` (solo LAN/VPN/SSH tunnel)
+
+Para parar:
 
 ```bash
-# Backend
-npm install --prefix backend
-npm run start --prefix backend        # http://localhost:3000
-
-# Frontend (proxy /api → :3000)
-npm install --prefix frontend
-npm run dev --prefix frontend         # http://localhost:5173
+./stop.sh
 ```
 
-## Variables de entorno (backend)
+## Red compartida
 
-Copia `backend/.env.example` a `backend/.env`. Docker Compose lo carga
-automáticamente vía `env_file` (servicio `backend`):
-
-```
-PORT=3000
-SESSION_SECRET=change_me_to_a_long_random_string
-COOKIE_SECURE=false
-ADMIN_USER=admin
-ADMIN_PASSWORD=change_me
-ESP_HOST=192.168.100.239
-ESP_PORT=80
-CLIMATE_TZ=America/Mexico_City
-```
-
-> En desarrollo hay valores por defecto inseguros (`SESSION_SECRET`,
-> `ADMIN_PASSWORD`). Cámbialos siempre en producción.
-
-## Deploy (Docker)
+Los dos stacks se comunican por la red externa `zigbee-net`. `start.sh` la crea
+si no existe:
 
 ```bash
-./deploy.sh          # git pull + rebuild + up
+docker network create zigbee-net
 ```
 
-O manualmente:
+- Mosquitto **no publica 1883** al host.
+- Zigbee2MQTT publica 8080 solo en `127.0.0.1`.
+- `home-hub` se conecta a `mqtt://mqtt:1883` por la red compartida.
+- El hub habla directamente con el ESP32 (`ESP_HOST`), sin backend intermedio.
+
+## Configuración sensible
+
+Estos archivos son locales y están ignorados por git:
+
+- `home-hub/.env`
+- `home-hub/config/automations.yaml`
+- `home-hub/data/`
+- `zigbee-stack/zigbee2mqtt/configuration.yaml`
+- `zigbee-stack/zigbee2mqtt/secrets.yaml`
+- `zigbee-stack/zigbee2mqtt/database.db`
+- `zigbee-stack/zigbee2mqtt/state.json`
+- `zigbee-stack/zigbee2mqtt/coordinator_backup.json`
+- `zigbee-stack/mosquitto/data/` y `zigbee-stack/mosquitto/log/`
+
+Solo se versionan los `.example.yaml`, `.env.example` y el código.
+
+## Automatizaciones Zigbee
+
+Las reglas reales viven en `home-hub/config/automations.yaml` (ignorado).
+El ejemplo versionado es `automations.example.yaml`:
+
+```yaml
+mode: shadow
+rules:
+  - id: relay-1-on
+    when: { device: motion-1, property: occupancy, equals: true }
+    then: { device: relay-1, state: "ON" }
+```
+
+- `AUTOMATION_MODE=shadow`: solo registra lo que haría.
+- `AUTOMATION_MODE=live`: envía el comando al relé.
+
+Para el corte desde Home Assistant, arranca en `shadow`, compara los logs y
+luego cambia a `live`.
+
+## Habitación / ESP32
+
+- El hub sondea `GET /api/sensors` y envía comandos IR con `GET /api/ac/set`.
+- Las rutinas de clima, el temporizador y el historial viven en
+  `home-hub/server/integrations/room/`.
+- El historial está en `home-hub/data/room/sensors.db`.
+- **El estado del aire es el último comando enviado**, no una confirmación
+  física: el IR es unidireccional.
+- El temporizador sigue en memoria; si el contenedor reinicia, se pierde.
+
+### Migrar datos de la versión anterior
+
+Con el servicio antiguo parado:
 
 ```bash
-docker compose up -d --build
+# Si conservas un backup de la versión antigua:
+mkdir -p home-hub/data/room
+cp -a /ruta/a/tu/backup/backend/data/. home-hub/data/room/
 ```
 
-Sirve la UI en `http://localhost:8084` y proxya `/api` al backend.
+Si ya tienes el hub funcionando, tus datos actuales están en
+`home-hub/data/room/` y no hace falta tocar nada.
 
-## Auth
+No ejecutes a la vez la versión antigua y el hub contra el ESP32.
 
-`/api/sensors` es público; el resto requiere sesión (`/api/auth/login`).
-La UI gatea con `RequireAuth`.
+## API
+
+```http
+POST /api/auth/login
+POST /api/auth/logout
+GET  /api/auth/me
+
+GET  /api/state
+GET  /api/zigbee/devices
+POST /api/zigbee/devices/:ieee/command   { "state": "ON" | "OFF" }
+
+GET  /api/room/status
+GET  /api/room/sensors/latest
+POST /api/room/ac
+POST /api/room/timer/start
+POST /api/room/timer/stop
+POST /api/room/climate/enabled
+POST /api/room/climate/run-now
+GET  /api/room/history?range=24h
+GET  /api/room/stats?date=...
+GET  /api/room/heatmap?month=...
+GET  /api/room/trends?days=30
+
+GET  /api/automations
+POST /api/automations/reload
+POST /api/automations/mode                 { "mode": "shadow" | "live" }
+GET  /api/health
+WS   /ws
+```
+
+## Desarrollo del hub
+
+```bash
+cd home-hub
+npm install
+npm run dev        # backend :3000 + Vite :5173
+npm run build      # frontend a dist/web
+npm start          # backend + frontend compilado
+npm test           # tests unitarios + integración con MQTT/ESP32 simulados
+npx tsc --noEmit   # typecheck
+```
+
+## Reverse proxy
+
+El hub sirve la PWA, la API y el WebSocket en `127.0.0.1:8084`. El reverse proxy
+de `ra.luisrlp.com` debe reenviar **también `/ws`** con upgrade:
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:8084;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+}
+```
+
+Con ese proxy, en `home-hub/.env` usa `COOKIE_SECURE=true` y `TRUST_PROXY=1`.
+Si el proxy reescribe el `Host`, define `ALLOWED_ORIGIN=https://ra.luisrlp.com`.
+
+## Seguridad
+
+- Solo el hub debe estar expuesto a Internet, detrás de HTTPS y login.
+- No publiques MQTT (`1883`) ni Zigbee2MQTT (`8080`) al exterior.
+- Usa una contraseña única y larga; si puedes, añade TOTP o Authelia en el
+  reverse proxy.
+- `DASHBOARD_PASSWORD` y `SESSION_SECRET` son obligatorios.
+- La cookie es `HttpOnly` y `SameSite=Strict`. Activa `COOKIE_SECURE=true`
+  con HTTPS.
+
+## Legacy
+
+- La app anterior de room-automation (`backend/`, `frontend/`) quedó en el
+  historial de git. Este repo ya no la despliega.
+- El repo `homeassistant` es legado; el proyecto activo es este.
+- `zigbee-stack/zigbee2mqtt/configuration.yaml` tiene
+  `homeassistant.enabled: false`.
