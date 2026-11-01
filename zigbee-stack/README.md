@@ -16,8 +16,12 @@ docker network create zigbee-net
 
 ```bash
 cd zigbee-stack
+mkdir -p mosquitto/data mosquitto/log
+chmod 777 mosquitto/data mosquitto/log
 docker compose up -d
 ```
+
+Si usas `../start.sh`, esos directorios y permisos se crean automáticamente.
 
 - **Mosquitto:** sin puerto público. Solo accesible por `zigbee-net`.
 - **Zigbee2MQTT:** `http://127.0.0.1:8080` para administración/pairing.

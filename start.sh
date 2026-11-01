@@ -39,12 +39,28 @@ if [ "$HUB_ONLY" = "0" ] && [ ! -e /dev/ttyUSB0 ]; then
   exit 1
 fi
 
+if [ "$HUB_ONLY" = "0" ]; then
+  if [ ! -f zigbee-stack/zigbee2mqtt/configuration.yaml ]; then
+    echo "Error: falta zigbee-stack/zigbee2mqtt/configuration.yaml." >&2
+    echo "Copia configuration.example.yaml y ajusta tu red." >&2
+    exit 1
+  fi
+  if [ ! -f zigbee-stack/zigbee2mqtt/secrets.yaml ]; then
+    echo "Error: falta zigbee-stack/zigbee2mqtt/secrets.yaml." >&2
+    echo "Copia secrets.yaml.example y pega tu network key." >&2
+    exit 1
+  fi
+fi
+
 if ! docker network inspect zigbee-net >/dev/null 2>&1; then
   echo "Creando red zigbee-net..."
   docker network create zigbee-net >/dev/null
 fi
 
 if [ "$HUB_ONLY" = "0" ]; then
+  # El contenedor de Mosquitto usa uid 1883; aseguramos que pueda escribir.
+  mkdir -p zigbee-stack/mosquitto/data zigbee-stack/mosquitto/log
+  chmod 777 zigbee-stack/mosquitto/data zigbee-stack/mosquitto/log 2>/dev/null || true
   echo "Levantando zigbee-stack..."
   (cd zigbee-stack && $COMPOSE up -d)
 else
