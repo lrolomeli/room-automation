@@ -16,17 +16,18 @@ home-hub (un contenedor: frontend + backend)
   └── HTTP ──► ESP32 (temperatura/humedad + IR del aire)
 ```
 
-- **`zigbee-stack/`**: Mosquitto + Zigbee2MQTT. Compose independiente.
+- **`zigbee-stack/`**: configuración de Mosquitto + Zigbee2MQTT.
 - **`home-hub/`**: un único contenedor con Express, React/PWA, MQTT,
   WebSocket, auth y el cliente del ESP32.
-- **`start.sh` / `stop.sh`**: arrancan/paran los dos stacks.
+- **`docker-compose.yml`**: compose raíz con los tres servicios.
+- **`start.sh` / `stop.sh`**: arrancan/paran el stack completo.
 
 ## Estructura
 
 ```
 .
+├── docker-compose.yml        # mqtt + zigbee2mqtt + hub
 ├── zigbee-stack/
-│   ├── docker-compose.yml
 │   ├── mosquitto/
 │   └── zigbee2mqtt/
 ├── home-hub/
@@ -37,7 +38,6 @@ home-hub (un contenedor: frontend + backend)
 │   │   └── automations.yaml  # real, ignorado por git
 │   ├── data/                 # persistencia, ignorada por git
 │   ├── Dockerfile
-│   ├── docker-compose.yml
 │   └── .env.example
 ├── start.sh
 └── stop.sh
@@ -86,19 +86,25 @@ Para parar:
 ./stop.sh
 ```
 
-## Red compartida
+## Un solo compose
 
-Los dos stacks se comunican por la red externa `zigbee-net`. `start.sh` la crea
-si no existe:
+El `docker-compose.yml` raíz levanta los tres servicios en la red por defecto
+del proyecto. No hay que crear redes externas.
 
-```bash
-docker network create zigbee-net
-```
-
+- `mqtt` es el nombre de servicio del broker; el hub y Z2M usan
+  `mqtt://mqtt:1883`.
 - Mosquitto **no publica 1883** al host.
 - Zigbee2MQTT publica 8080 solo en `127.0.0.1`.
-- `home-hub` se conecta a `mqtt://mqtt:1883` por la red compartida.
 - El hub habla directamente con el ESP32 (`ESP_HOST`), sin backend intermedio.
+
+Operaciones individuales:
+
+```bash
+docker compose up -d --build hub     # reconstruir solo el hub
+docker compose restart hub           # reiniciar solo el hub
+docker compose logs -f               # logs de todos
+docker compose logs -f zigbee2mqtt   # logs de Z2M
+```
 
 ## Configuración sensible
 

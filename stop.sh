@@ -10,5 +10,4 @@ else
   COMPOSE="docker-compose"
 fi
 
-(cd home-hub && $COMPOSE down)
-(cd zigbee-stack && $COMPOSE down)
+$COMPOSE down

@@ -1,29 +1,27 @@
 # Zigbee stack
 
-Mosquitto + Zigbee2MQTT, en su propio `docker-compose.yml`.
+Mosquitto + Zigbee2MQTT, definidos en el `docker-compose.yml` raíz.
 
-## Red
-
-El hub y este stack comparten la red externa `zigbee-net`:
-
-```bash
-docker network create zigbee-net
-```
-
-`start.sh` en la raíz la crea si no existe.
+El broker se llama `mqtt` dentro de la red por defecto del compose. El hub y
+Zigbee2MQTT lo resuelven como `mqtt:1883`; no hay red externa.
 
 ## Arranque
 
+Desde la raíz del repo:
+
 ```bash
-cd zigbee-stack
-mkdir -p mosquitto/data mosquitto/log
-chmod 777 mosquitto/data mosquitto/log
-docker compose up -d
+mkdir -p zigbee-stack/mosquitto/data zigbee-stack/mosquitto/log
+chmod 777 zigbee-stack/mosquitto/data zigbee-stack/mosquitto/log
+docker compose up -d mqtt zigbee2mqtt
 ```
 
-Si usas `../start.sh`, esos directorios y permisos se crean automáticamente.
+O el stack completo:
 
-- **Mosquitto:** sin puerto público. Solo accesible por `zigbee-net`.
+```bash
+./start.sh
+```
+
+- **Mosquitto:** sin puerto público. Solo accesible por la red del compose.
 - **Zigbee2MQTT:** `http://127.0.0.1:8080` para administración/pairing.
   No lo expongas a Internet; usa LAN, VPN o túnel SSH.
 - El dongle se monta como `/dev/ttyUSB0`.
