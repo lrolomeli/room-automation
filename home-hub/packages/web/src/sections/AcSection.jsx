@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Card from '../components/ui/Card';
 import Banner from '../components/ui/Banner';
 import Spinner from '../components/ui/Spinner';
@@ -19,6 +19,8 @@ const DEFAULT_AC = {
   sleep: false,
   health: false,
 };
+
+const FIELDS = Object.keys(DEFAULT_AC);
 
 const MODE_RAW = { auto: 0, cool: 1, dry: 2, heat: 4, fan: 6 };
 const FAN_RAW = { high: 1, med: 2, low: 3, auto: 5 };
@@ -58,45 +60,46 @@ export default function AcSection({ room, refresh, mySw }) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [tempDraft, setTempDraft] = useState(null);
+  const [draft, setDraft] = useState(DEFAULT_AC);
 
   const mapped = mapState(room?.ac);
-  const ac = mapped || DEFAULT_AC;
+  const applied = mapped || DEFAULT_AC;
   const hasState = !!mapped;
+  const appliedKey = JSON.stringify(applied);
+  const changed = FIELDS.filter((field) => draft[field] !== applied[field]).length;
+  const dirty = changed > 0;
+
   const sensor = room?.sensor;
   const stale = !!sensor?.stale;
   const currentTemp = sensor?.temperature;
   const humidity = sensor?.humidity;
 
   useEffect(() => {
-    if (ac.temp != null) setTempDraft(ac.temp);
-  }, [ac.temp]);
+    if (!dirty) setDraft(JSON.parse(appliedKey));
+  }, [appliedKey, dirty]);
 
-  const send = useCallback(
-    async (partial) => {
-      setSending(true);
-      setError('');
-      setNotice('');
-      try {
-        await api.post('/api/room/ac', partial);
-        await refresh();
-        setNotice('Comando enviado');
-      } catch (err) {
-        setError(`No se pudo enviar: ${err.message}`);
-      } finally {
-        setSending(false);
-      }
-    },
-    [refresh],
-  );
+  const updateDraft = (partial) => {
+    setDraft((previous) => ({ ...previous, ...partial }));
+    setError('');
+    setNotice('');
+  };
 
-  useEffect(() => {
-    if (tempDraft == null || ac.temp == null || tempDraft === ac.temp) return undefined;
-    const timer = setTimeout(() => {
-      send({ temp: tempDraft });
-    }, 700);
-    return () => clearTimeout(timer);
-  }, [tempDraft, ac.temp, send]);
+  const applyDraft = async () => {
+    setSending(true);
+    setError('');
+    setNotice('');
+    try {
+      await api.post('/api/room/ac', draft);
+      await refresh();
+      setNotice('Cambios aplicados');
+      return true;
+    } catch (err) {
+      setError(`No se pudo aplicar: ${err.message}`);
+      return false;
+    } finally {
+      setSending(false);
+    }
+  };
 
   if (!room) return <Spinner label="Cargando habitación…" />;
 
@@ -107,13 +110,16 @@ export default function AcSection({ room, refresh, mySw }) {
       <Card
         title="Aire acondicionado"
         action={
-          <span
-            className={`rounded-full px-2.5 py-0.5 text-xs ${
-              ac.power ? 'bg-ok/15 text-ok' : 'bg-white/10 text-white/60'
-            }`}
-          >
-            {ac.power ? 'Encendido' : 'Apagado'}
-          </span>
+          <div className="flex items-center gap-2">
+            {dirty && <span className="text-xs text-warn">Sin aplicar</span>}
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-xs ${
+                applied.power ? 'bg-ok/15 text-ok' : 'bg-white/10 text-white/60'
+              }`}
+            >
+              {applied.power ? 'Encendido' : 'Apagado'}
+            </span>
+          </div>
         }
       >
         {error && <Banner variant="err" className="mb-3">{error}</Banner>}
@@ -158,11 +164,11 @@ export default function AcSection({ room, refresh, mySw }) {
         <div className="mt-4 flex gap-3">
           <button
             type="button"
-            onClick={() => send({ power: true })}
+            onClick={() => updateDraft({ power: true })}
             disabled={sending}
             className={[
               'flex flex-1 items-center justify-center gap-2 rounded-2xl border px-4 py-4 text-base transition-colors disabled:opacity-50',
-              ac.power
+              draft.power
                 ? 'border-ok/50 bg-ok/15 text-ok shadow-[0_0_18px_rgba(46,204,113,0.25)]'
                 : 'border-white/15 bg-white/5 text-white/70 hover:bg-white/10',
             ].join(' ')}
@@ -172,11 +178,11 @@ export default function AcSection({ room, refresh, mySw }) {
           </button>
           <button
             type="button"
-            onClick={() => send({ power: false })}
+            onClick={() => updateDraft({ power: false })}
             disabled={sending}
             className={[
               'flex flex-1 items-center justify-center gap-2 rounded-2xl border px-4 py-4 text-base transition-colors disabled:opacity-50',
-              !ac.power
+              !draft.power
                 ? 'border-danger/50 bg-danger/15 text-danger shadow-[0_0_18px_rgba(255,71,87,0.2)]'
                 : 'border-white/15 bg-white/5 text-white/70 hover:bg-white/10',
             ].join(' ')}
@@ -191,10 +197,10 @@ export default function AcSection({ room, refresh, mySw }) {
             Temperatura ajustada
           </div>
           <Stepper
-            value={tempDraft ?? ac.temp}
+            value={draft.temp}
             min={16}
             max={30}
-            onChange={setTempDraft}
+            onChange={(temp) => updateDraft({ temp })}
             disabled={sending}
             format={(value) => `${value}°C`}
           />
@@ -216,9 +222,29 @@ export default function AcSection({ room, refresh, mySw }) {
       <AcAdvancedModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        ac={ac}
-        onApplied={refresh}
+        draft={draft}
+        onChange={updateDraft}
+        onApply={applyDraft}
+        sending={sending}
+        error={error}
       />
+
+      {(dirty || sending) && (
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[#1a1730]/95 px-4 py-3 backdrop-blur">
+          <div className="mx-auto max-w-[40rem]">
+            <button
+              type="button"
+              onClick={applyDraft}
+              disabled={sending}
+              className="w-full rounded-xl bg-accent py-3 font-semibold text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
+            >
+              {sending
+                ? 'Enviando…'
+                : `Aplicar ${changed} ${changed === 1 ? 'cambio' : 'cambios'}`}
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

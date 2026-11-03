@@ -1,21 +1,6 @@
-import { useEffect, useState } from 'react';
 import Modal from '../components/ui/Modal';
 import Banner from '../components/ui/Banner';
 import SegmentedControl from '../components/ui/SegmentedControl';
-import { api } from '../lib/api';
-
-const DEFAULT_AC = {
-  power: false,
-  temp: 24,
-  mode: 'cool',
-  fan: 'med',
-  swing_v: 'off',
-  swing_h: 'middle',
-  turbo: false,
-  quiet: false,
-  sleep: false,
-  health: false,
-};
 
 const MODES = [
   { value: 'auto', label: 'Auto' },
@@ -57,36 +42,18 @@ const TOGGLES = [
   { value: 'health', label: 'Salud' },
 ];
 
-export default function AcAdvancedModal({ open, onClose, ac, onApplied }) {
-  const [draft, setDraft] = useState(ac || DEFAULT_AC);
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (!open) return;
-    setDraft(ac || DEFAULT_AC);
-    setError('');
-    // Solo reiniciar al abrir; los updates de la sala no deben borrar el borrador.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  const update = (partial) => {
-    setDraft((previous) => ({ ...previous, ...partial }));
-    setError('');
-  };
-
+export default function AcAdvancedModal({
+  open,
+  onClose,
+  draft,
+  onChange,
+  onApply,
+  sending,
+  error,
+}) {
   const apply = async () => {
-    setSending(true);
-    setError('');
-    try {
-      await api.post('/api/room/ac', draft);
-      await onApplied();
-      onClose();
-    } catch (err) {
-      setError(`No se pudo aplicar: ${err.message}`);
-    } finally {
-      setSending(false);
-    }
+    const ok = await onApply();
+    if (ok) onClose();
   };
 
   return (
@@ -126,7 +93,7 @@ export default function AcAdvancedModal({ open, onClose, ac, onApplied }) {
           <SegmentedControl
             options={MODES}
             value={draft.mode}
-            onChange={(mode) => update({ mode })}
+            onChange={(mode) => onChange({ mode })}
             disabled={sending}
             wrap
           />
@@ -139,7 +106,7 @@ export default function AcAdvancedModal({ open, onClose, ac, onApplied }) {
           <SegmentedControl
             options={FANS}
             value={draft.fan}
-            onChange={(fan) => update({ fan })}
+            onChange={(fan) => onChange({ fan })}
             disabled={sending}
           />
         </div>
@@ -151,7 +118,7 @@ export default function AcAdvancedModal({ open, onClose, ac, onApplied }) {
           <SegmentedControl
             options={SWINGS_V}
             value={draft.swing_v}
-            onChange={(swing_v) => update({ swing_v })}
+            onChange={(swing_v) => onChange({ swing_v })}
             disabled={sending}
             wrap
           />
@@ -164,7 +131,7 @@ export default function AcAdvancedModal({ open, onClose, ac, onApplied }) {
           <SegmentedControl
             options={SWINGS_H}
             value={draft.swing_h}
-            onChange={(swing_h) => update({ swing_h })}
+            onChange={(swing_h) => onChange({ swing_h })}
             disabled={sending}
             wrap
           />
@@ -180,7 +147,7 @@ export default function AcAdvancedModal({ open, onClose, ac, onApplied }) {
                 key={toggle.value}
                 type="button"
                 disabled={sending}
-                onClick={() => update({ [toggle.value]: !draft[toggle.value] })}
+                onClick={() => onChange({ [toggle.value]: !draft[toggle.value] })}
                 className={[
                   'min-w-[3.4rem] flex-1 rounded-lg border px-2 py-2 text-sm transition-colors disabled:opacity-40',
                   draft[toggle.value]
