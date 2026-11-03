@@ -165,18 +165,8 @@ function publishCommand(deviceId, state) {
 
   const commandId = crypto.randomUUID();
 
-  if (device.state === state) {
-    bus.emit('zigbee.command', {
-      commandId,
-      ieee: device.ieee,
-      name: device.name,
-      status: 'confirmed',
-      state,
-      already: true,
-    });
-    return { commandId, ieee: device.ieee, name: device.name, desired: state, already: true };
-  }
-
+  // Siempre publicar. Si el estado del registro quedó viejo, omitir el comando
+  // deja el relé sin respuesta y la UI esperando confirmación.
   const previous = pending.get(device.ieee);
   if (previous) clearTimeout(previous.timer);
 
