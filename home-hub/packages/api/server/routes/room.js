@@ -79,4 +79,8 @@ router.get('/trends', (req, res) => {
   res.json(room.trends(Number(req.query.days) || 30));
 });
 
+router.get('/rates', (req, res) => {
+  res.json(room.rates(Number(req.query.days) || 30));
+});
+
 module.exports = router;

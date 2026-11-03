@@ -5,7 +5,6 @@ import Switch from '../components/ui/Switch';
 import Banner from '../components/ui/Banner';
 import Spinner from '../components/ui/Spinner';
 import { api } from '../lib/api';
-import { usePoll } from '../hooks/usePoll';
 
 const DAY_LABELS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const MODE_LABELS = { auto: 'Auto', cool: 'Frío', dry: 'Seco', heat: 'Calor', fan: 'Ventilador' };
@@ -20,6 +19,9 @@ function daysText(days = []) {
 }
 
 function routineDetail(routine) {
+  if (routine.kind === 'eco') {
+    return `Manual · enciende a ${routine.onAboveC}°C · apaga a ${routine.offBelowC}°C · setpoint ${routine.setpoint}°C · ventilador ${FAN_LABELS[routine.fan] || routine.fan}`;
+  }
   const end = routine.endAction === 'off' ? 'y apagar' : 'y mantener';
   if (routine.adaptive) {
     return `${daysText(routine.days)} · objetivo ${routine.fromTemp}° a ${routine.toTemp}° durante la noche (+1° cada ${routine.stepMinutes} min). El setpoint se ajusta solo según la temperatura real, ${end}`;
@@ -36,12 +38,12 @@ function routineDetail(routine) {
 }
 
 function routineTime(routine) {
+  if (routine.kind === 'eco') return 'Manual';
   if (routine.kind === 'ramp') return `${routine.start}–${routine.end}`;
   return routine.time;
 }
 
-export default function AutomationSection() {
-  const { data: room, loading, refresh } = usePoll('/api/room/status', 30000);
+export default function AutomationSection({ room, refresh }) {
   const status = room?.climate
     ? { ...room.climate, sensor: room.sensor, ac: room.ac }
     : null;
@@ -63,15 +65,14 @@ export default function AutomationSection() {
     }
   };
 
-  if (loading && !status) return <Spinner label="Cargando automatización…" />;
-  if (!status) return null;
+  if (!status) return <Spinner label="Cargando automatización…" />;
 
   const sensor = status.sensor;
   const ac = status.ac;
   const control = status.control;
 
   return (
-    <Card title="Clima automático">
+    <Card title="Ahorro 26–29">
       {error && <Banner variant="err" className="mb-3">{error}</Banner>}
 
       <div className="flex items-center justify-between gap-3">
@@ -80,7 +81,7 @@ export default function AutomationSection() {
           checked={status.enabled}
           onChange={toggle}
           disabled={busy}
-          label="Activar o desactivar la automatización"
+          label="Activar o desactivar la rutina de ahorro"
         />
       </div>
 

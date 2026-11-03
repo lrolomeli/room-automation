@@ -66,6 +66,17 @@ export interface RoomTimer {
   secondsRemaining: number;
 }
 
+export interface EcoRoutine {
+  id: string;
+  name: string;
+  onAboveC: number;
+  offBelowC: number;
+  setpoint: number;
+  mode: string;
+  fan: string;
+  active: boolean;
+}
+
 export interface ClimateStatus {
   enabled: boolean;
   humidityActive: boolean;
@@ -73,6 +84,7 @@ export interface ClimateStatus {
   sensor: RoomSensor | null;
   ac: AcState | null;
   timezone: string;
+  eco?: EcoRoutine;
   control: {
     targetTemp?: number;
     roomTemp?: number | null;
@@ -116,4 +128,23 @@ export interface HubSnapshot {
   room: RoomStatus | null;
   automations: AutomationStatus;
   meta: { climateTz: string; automationMode: string };
+}
+
+export interface RateSummary {
+  samples: number;
+  medianRateCPerMin: number | null;
+  minutesFor3C: number | null;
+}
+
+export interface PeriodRates {
+  period: string;
+  cooling: RateSummary;
+  warming: RateSummary;
+}
+
+export interface RoomRates {
+  totalSamples: number;
+  cooling: RateSummary;
+  warming: RateSummary;
+  byPeriod: PeriodRates[];
 }

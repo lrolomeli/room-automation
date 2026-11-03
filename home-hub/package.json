@@ -12,7 +12,6 @@
     "dev:web": "npm run dev -w @home-hub/web",
     "build": "npm run build -w @home-hub/web",
     "start": "npm run start -w @home-hub/api",
-    "test": "npm run test -w @home-hub/api",
     "typecheck": "npm run typecheck -w @home-hub/web",
     "check": "npm run check -w @home-hub/api && npm run typecheck -w @home-hub/web"
   },

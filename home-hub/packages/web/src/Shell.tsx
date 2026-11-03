@@ -1,20 +1,20 @@
 import { useState, type ReactNode } from 'react';
 import { useSession } from './context/SessionContext';
 import { useRealtime } from './hooks/useRealtime';
-import ZigbeeView from './features/zigbee/ZigbeeView';
-import NowSection from './sections/NowSection';
-import ControlSection from './sections/ControlSection';
-import AutomationSection from './sections/AutomationSection';
-import HistorySection from './sections/HistorySection';
+import AcSection from './sections/AcSection';
+import ParentsSection from './sections/ParentsSection';
+import MasSection from './sections/MasSection';
 import Banner from './components/ui/Banner';
 
-type Tab = 'casa' | 'habitacion';
+type Tab = 'mi-cuarto' | 'papas' | 'mas';
 
 export default function Shell() {
   const { logout } = useSession();
-  const { connected, devices, bridge, automations, lastError } = useRealtime();
-  const [tab, setTab] = useState<Tab>('casa');
+  const { connected, devices, room, refresh, lastError } = useRealtime();
+  const [tab, setTab] = useState<Tab>('mi-cuarto');
   const deviceList = Object.values(devices);
+  const mySw = deviceList.find((device) => device.name === 'my-sw');
+  const parSw = deviceList.find((device) => device.name === 'par-sw');
 
   return (
     <div className="min-h-screen">
@@ -44,11 +44,14 @@ export default function Shell() {
         </div>
 
         <nav className="mx-auto flex max-w-[64rem] gap-1 px-4 pb-2">
-          <TabButton active={tab === 'casa'} onClick={() => setTab('casa')}>
-            Casa
+          <TabButton active={tab === 'mi-cuarto'} onClick={() => setTab('mi-cuarto')}>
+            Mi cuarto
           </TabButton>
-          <TabButton active={tab === 'habitacion'} onClick={() => setTab('habitacion')}>
-            Habitación
+          <TabButton active={tab === 'papas'} onClick={() => setTab('papas')}>
+            Papás
+          </TabButton>
+          <TabButton active={tab === 'mas'} onClick={() => setTab('mas')}>
+            Más
           </TabButton>
         </nav>
       </header>
@@ -59,21 +62,9 @@ export default function Shell() {
         )}
         {lastError && connected && <Banner variant="warn">{lastError}</Banner>}
 
-        {tab === 'casa' ? (
-          <ZigbeeView
-            devices={deviceList}
-            bridge={bridge}
-            automations={automations}
-            connected={connected}
-          />
-        ) : (
-          <div className="flex flex-col gap-3.5">
-            <NowSection />
-            <ControlSection />
-            <AutomationSection />
-            <HistorySection />
-          </div>
-        )}
+        {tab === 'mi-cuarto' && <AcSection room={room} refresh={refresh} mySw={mySw} />}
+        {tab === 'papas' && <ParentsSection parSw={parSw} />}
+        {tab === 'mas' && <MasSection room={room} refresh={refresh} />}
       </main>
     </div>
   );

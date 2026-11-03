@@ -44,33 +44,26 @@ const zoneFormatter = new Intl.DateTimeFormat('en-US', {
 });
 
 /*
- * Las automatizaciones viven en el codigo (no en la UI). El usuario solo
- * decide si el motor esta encendido o apagado; el resto lo editamos aqui.
- *
- * Perfil de noche: 22:30 -> 04:30. La temperatura OBJETIVO del cuarto empieza
- * en 25C y sube despacio a 27C. El setpoint real del AC lo decide el lazo
- * cerrado segun la temperatura medida.
+ * Rutina manual de ahorro. Se activa con el switch "Clima automático" y
+ * funciona a cualquier hora: enciende al llegar a onAboveC y apaga al bajar
+ * de offBelowC. El setpoint se mantiene alto para no sobreenfriar.
  */
-const PRESET_ROUTINES = [
-  {
-    id: 'night',
-    name: 'Noche',
-    kind: 'ramp',
-    adaptive: true,
-    enabled: true,
-    days: ALL_DAYS,
-    start: '22:30',
-    end: '04:30',
-    fromTemp: 25,
-    toTemp: 27,
-    stepMinutes: 120,
-    endAction: 'off',
-    state: { mode: 'cool', fan: 'med' },
-  },
-];
+const ECO = {
+  id: 'eco',
+  name: 'Ahorro 26–29',
+  onAboveC: 29,
+  offBelowC: 26.5,
+  setpoint: 26,
+  mode: 'cool',
+  fan: 'med',
+};
+
+/* Ya no hay rutinas por horario; el motor solo ejecuta la rutina de ahorro. */
+const PRESET_ROUTINES = [];
 
 const DEFAULTS = {
-  enabled: true,
+  // Manual: no actúa hasta que el usuario encienda "Clima automático".
+  enabled: false,
   minCycleMinutes: 4,
   resyncMinutes: 0,
   respectManualOverrideMin: 30,
@@ -79,7 +72,7 @@ const DEFAULTS = {
     thresholdPct: 65,
     hysteresisPct: 5,
     action: 'dry',
-    targetTemp: 25,
+    targetTemp: 26,
   },
   routines: PRESET_ROUTINES,
 };
@@ -512,19 +505,71 @@ function adaptiveTarget(now, base) {
   return { target: { power: true, mode: base.mode, temp: setpoint, fan }, rule: base.rule, detail: reason };
 }
 
+function ecoControl(now) {
+  const cur = acState.get();
+  const latest = sensors.getLatest();
+
+  if (!latest || latest.temperature == null) {
+    return {
+      target: { power: cur.power },
+      rule: ECO.name,
+      detail: 'sin sensor, mantengo',
+    };
+  }
+
+  const room = Number(latest.temperature);
+  if (!isFresh(latest, now)) {
+    return {
+      target: { power: cur.power },
+      rule: ECO.name,
+      detail: `sensor sin datos recientes (${fmt(room)}C), mantengo`,
+    };
+  }
+
+  let target;
+  let detail;
+  if (!cur.power && room >= ECO.onAboveC) {
+    target = { power: true, mode: ECO.mode, temp: ECO.setpoint, fan: ECO.fan };
+    detail = `cuarto ${fmt(room)}C >= ${ECO.onAboveC}C -> encender ${ECO.setpoint}C`;
+  } else if (cur.power && room <= ECO.offBelowC) {
+    target = { power: false };
+    detail = `cuarto ${fmt(room)}C <= ${ECO.offBelowC}C -> apagar`;
+  } else {
+    target = { power: cur.power };
+    detail = `en banda (${fmt(room)}C, ${ECO.offBelowC}-${ECO.onAboveC}C)`;
+  }
+
+  lastControl = {
+    targetTemp: ECO.setpoint,
+    roomTemp: room,
+    slope: 0,
+    setpoint: cur.power ? cur.temp : ECO.setpoint,
+    fan: cur.power ? cur.fan : ECO.fan,
+    reason: detail,
+    at: now.toISOString(),
+  };
+
+  return { target, rule: ECO.name, detail };
+}
+
 function computeTarget(now) {
   const base = scheduleBase(now);
   const humidity = humidityDecision();
 
   if (humidity.active) {
-    const target = { power: true, mode: config.humidity.action, temp: config.humidity.targetTemp };
-    if (base && base.power && base.fan) target.fan = base.fan;
-    const pct = humidity.humidity == null ? '?' : humidity.humidity;
-    return {
-      target,
-      rule: 'Higrostato',
-      detail: `humedad ${pct}% -> ${config.humidity.action} ${config.humidity.targetTemp}C`,
-    };
+    const latest = sensors.getLatest();
+    const room = latest && latest.temperature != null ? Number(latest.temperature) : null;
+    // No usar dry si el cuarto ya está por debajo del mínimo de confort.
+    if (room == null || room > ECO.offBelowC) {
+      const target = { power: true, mode: config.humidity.action, temp: config.humidity.targetTemp };
+      if (base && base.power && base.fan) target.fan = base.fan;
+      const pct = humidity.humidity == null ? '?' : humidity.humidity;
+      return {
+        target,
+        rule: 'Higrostato',
+        detail: `humedad ${pct}% -> ${config.humidity.action} ${config.humidity.targetTemp}C`,
+      };
+    }
   }
 
   if (base && base.power && base.adaptive) {
@@ -542,7 +587,7 @@ function computeTarget(now) {
     };
   }
 
-  return { target: { power: false }, rule: 'Automático', detail: 'sin regla activa' };
+  return ecoControl(now);
 }
 
 async function maybeResync(now) {
@@ -586,7 +631,8 @@ async function tick(now = new Date(), { force = false } = {}) {
   }
 
   const changesPower = target.power !== current.power;
-  if (changesPower && inCooldown(now) && !force) {
+  // Apagar siempre se permite; el anti-ciclo solo frena el reencendido.
+  if (changesPower && target.power === true && inCooldown(now) && !force) {
     addLog({ rule, detail: `${detail} (omitido por anti-ciclado)`, ok: false });
     return { ran: true, applied: false, reason: 'cooldown' };
   }
@@ -643,35 +689,19 @@ function nextRoutine(now = new Date()) {
 }
 
 function describeSchedule() {
-  return config.routines.map((routine) => (
-    routine.kind === 'ramp'
-      ? {
-          id: routine.id,
-          name: routine.name,
-          kind: 'ramp',
-          adaptive: routine.adaptive === true,
-          enabled: routine.enabled,
-          days: routine.days,
-          start: routine.start,
-          end: routine.end,
-          fromTemp: routine.fromTemp,
-          toTemp: routine.toTemp,
-          stepMinutes: routine.stepMinutes,
-          mode: routine.state.mode,
-          fan: routine.state.fan,
-          endAction: routine.endAction,
-        }
-      : {
-          id: routine.id,
-          name: routine.name,
-          kind: 'at',
-          enabled: routine.enabled,
-          days: routine.days,
-          time: routine.time,
-          action: routine.action,
-          state: routine.state,
-        }
-  ));
+  return [
+    {
+      id: ECO.id,
+      name: ECO.name,
+      kind: 'eco',
+      enabled: config.enabled,
+      onAboveC: ECO.onAboveC,
+      offBelowC: ECO.offBelowC,
+      setpoint: ECO.setpoint,
+      mode: ECO.mode,
+      fan: ECO.fan,
+    },
+  ];
 }
 
 function status() {
@@ -687,6 +717,7 @@ function status() {
     control: lastControl,
     nextRoutine: nextRoutine(),
     schedule: describeSchedule(),
+    eco: { ...ECO, active: config.enabled },
     humidity: { ...config.humidity },
     log,
   };

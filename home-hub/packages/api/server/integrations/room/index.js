@@ -4,6 +4,7 @@ const acTimer = require('./automation/ac-timer');
 const acState = require('./data/ac-state');
 const { applyAcState } = require('./services/ac');
 const { espRequest } = require('./esp');
+const { computeRates } = require('./analysis/rates');
 
 const POLL_SLOW_MS = 5 * 60 * 1000;
 const POLL_FAST_MS = 60 * 1000;
@@ -65,7 +66,15 @@ async function pollSensor() {
       throw new Error('ESP returned invalid sensor readings');
     }
     const timestamp = new Date().toISOString();
-    sensors.insertReading(temperature, humidity, parsed.unit || 'celsius', timestamp, 'auto');
+    const ac = acState.serialize();
+    sensors.insertReading(
+      temperature,
+      humidity,
+      parsed.unit || 'celsius',
+      timestamp,
+      'auto',
+      { power: ac.power, temp: ac.temp, mode: ac.mode, fan: ac.fan },
+    );
     lastError = null;
     const reading = { temperature, humidity, unit: parsed.unit || 'celsius', timestamp };
     emit('room.sensor', reading);
@@ -196,6 +205,10 @@ function trends(days = 30) {
   };
 }
 
+function rates(days = 30) {
+  return computeRates(sensors.getRange((Number(days) || 30) * 24));
+}
+
 function health() {
   return {
     started,
@@ -221,6 +234,7 @@ module.exports = {
   stats,
   heatmap,
   trends,
+  rates,
   health,
   climate,
   acTimer,

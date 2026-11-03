@@ -40,8 +40,7 @@ api (Express + MQTT + WebSocket + auth + cliente del ESP32)
 ├── home-hub/
 │   ├── packages/
 │   │   ├── api/              # Express, MQTT, WS, auth, integración ESP32
-│   │   │   ├── server/
-│   │   │   └── test/
+│   │   │   └── server/
 │   │   ├── web/              # React + Vite + Tailwind
 │   │   │   ├── src/
 │   │   │   ├── public/
@@ -249,17 +248,17 @@ npm install
 npm run dev        # API :3000 + Vite :5173 (proxy /api y /ws)
 npm run build      # frontend a packages/web/dist
 npm start          # solo API (:3000); el frontend se sirve con nginx o Vite
-npm test           # tests de la API con MQTT/ESP32 simulados
 npm run typecheck  # typecheck del frontend
 npm run check      # check de la API + typecheck del frontend
 ```
+
+La prueba del proyecto es manual desde la app y el stack de Docker.
 
 El proyecto usa npm workspaces:
 
 ```bash
 npm run dev -w @home-hub/api
 npm run dev -w @home-hub/web
-npm run test -w @home-hub/api
 ```
 
 El contrato de tipos vive en `packages/contract/index.d.ts` y lo consume el

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import Card from '../components/ui/Card';
 import Banner from '../components/ui/Banner';
 import { api } from '../lib/api';
-import { usePoll } from '../hooks/usePoll';
 
 const PRESETS = [15, 30, 60, 120];
 
@@ -15,11 +14,10 @@ function fmtRemaining(seconds) {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-export default function TimerSection({ draft }) {
+export default function TimerSection({ room, refresh }) {
   const [minutes, setMinutes] = useState(30);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const { data: room, refresh } = usePoll('/api/room/status', 5000);
   const status = room?.timer;
 
   const start = async (loop) => {
@@ -31,7 +29,7 @@ export default function TimerSection({ draft }) {
     setBusy(true);
     setError('');
     try {
-      await api.post('/api/room/timer/start', { minutes: mins, loop, state: draft });
+      await api.post('/api/room/timer/start', { minutes: mins, loop });
       await refresh();
     } catch (err) {
       setError(`No se pudo iniciar: ${err.message}`);

@@ -7,23 +7,63 @@ const SCHEMA = `
     humidity REAL NOT NULL,
     unit TEXT DEFAULT 'celsius',
     timestamp DATETIME DEFAULT (datetime('now')),
-    source TEXT DEFAULT 'auto'
+    source TEXT DEFAULT 'auto',
+    ac_power INTEGER,
+    ac_setpoint REAL,
+    ac_mode TEXT,
+    ac_fan TEXT
   );
   CREATE INDEX IF NOT EXISTS idx_readings_timestamp ON readings(timestamp);
 `;
 
+const AC_COLUMNS = [
+  ['ac_power', 'INTEGER'],
+  ['ac_setpoint', 'REAL'],
+  ['ac_mode', 'TEXT'],
+  ['ac_fan', 'TEXT'],
+];
+
+function migrate() {
+  const columns = new Set(
+    db.queryAll('sensors', 'PRAGMA table_info(readings)').map((row) => row.name),
+  );
+  for (const [name, type] of AC_COLUMNS) {
+    if (!columns.has(name)) {
+      db.exec('sensors', `ALTER TABLE readings ADD COLUMN ${name} ${type}`);
+    }
+  }
+}
+
 function init() {
   return db.init('sensors').then(() => {
     db.exec('sensors', SCHEMA);
+    migrate();
   });
 }
 
 module.exports = {
   init,
 
-  insertReading(temperature, humidity, unit = 'celsius', timestamp, source = 'auto') {
+  insertReading(temperature, humidity, unit = 'celsius', timestamp, source = 'auto', ac = null) {
     const ts = timestamp || new Date().toISOString();
-    db.run('sensors', 'INSERT INTO readings (temperature, humidity, unit, timestamp, source) VALUES (?, ?, ?, ?, ?)', [temperature, humidity, unit, ts, source]);
+    const acPower = ac && typeof ac.power === 'boolean' ? (ac.power ? 1 : 0) : null;
+    db.run(
+      'sensors',
+      `INSERT INTO readings
+        (temperature, humidity, unit, timestamp, source, ac_power, ac_setpoint, ac_mode, ac_fan)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        temperature,
+        humidity,
+        unit,
+        ts,
+        source,
+        acPower,
+        ac?.temp ?? null,
+        ac?.mode ?? null,
+        ac?.fan ?? null,
+      ],
+    );
     const row = db.queryOne('sensors', 'SELECT last_insert_rowid() AS id');
     return { lastID: row ? row.id : null };
   },
