@@ -9,35 +9,53 @@ git; ya no se despliega.
 
 ```
 Navegador / PWA
-  │ HTTPS + WebSocket
+  │ HTTPS + WebSocket (:8084)
   ▼
-home-hub (un contenedor: frontend + backend)
+web (nginx: estáticos + proxy /api y /ws)
+  │ red interna de Docker
+  ▼
+api (Express + MQTT + WebSocket + auth + cliente del ESP32)
   ├── MQTT ──► Mosquitto ──► Zigbee2MQTT ──► Relés / sensores Zigbee
   └── HTTP ──► ESP32 (temperatura/humedad + IR del aire)
 ```
 
 - **`zigbee-stack/`**: configuración de Mosquitto + Zigbee2MQTT.
-- **`home-hub/`**: un único contenedor con Express, React/PWA, MQTT,
-  WebSocket, auth y el cliente del ESP32.
-- **`docker-compose.yml`**: compose raíz con los tres servicios.
+- **`home-hub/packages/api/`**: Express, MQTT, WebSocket, auth y el cliente del
+  ESP32. No sirve el frontend.
+- **`home-hub/packages/web/`**: React + Vite + Tailwind. Solo habla con la API
+  por HTTP y WebSocket.
+- **`home-hub/packages/contract/`**: tipos TypeScript compartidos entre la API
+  y el dashboard (contrato del snapshot y de los dispositivos).
+- **`docker-compose.yml`**: compose raíz con los cuatro servicios.
 - **`start.sh` / `stop.sh`**: arrancan/paran el stack completo.
 
 ## Estructura
 
 ```
 .
-├── docker-compose.yml        # mqtt + zigbee2mqtt + hub
+├── docker-compose.yml        # mqtt + zigbee2mqtt + api + web
 ├── zigbee-stack/
 │   ├── mosquitto/
 │   └── zigbee2mqtt/
 ├── home-hub/
-│   ├── server/               # Express, MQTT, WS, auth, integración ESP32
-│   ├── web/                  # React + Vite + Tailwind
+│   ├── packages/
+│   │   ├── api/              # Express, MQTT, WS, auth, integración ESP32
+│   │   │   ├── server/
+│   │   │   └── test/
+│   │   ├── web/              # React + Vite + Tailwind
+│   │   │   ├── src/
+│   │   │   ├── public/
+│   │   │   ├── vite.config.ts
+│   │   │   └── tsconfig.json
+│   │   └── contract/         # tipos compartidos API ↔ dashboard
 │   ├── config/
 │   │   ├── automations.example.yaml
 │   │   └── automations.yaml  # real, ignorado por git
 │   ├── data/                 # persistencia, ignorada por git
-│   ├── Dockerfile
+│   ├── nginx.conf
+│   ├── Dockerfile.api
+│   ├── Dockerfile.web
+│   ├── package.json          # raíz de npm workspaces
 │   └── .env.example
 ├── start.sh
 └── stop.sh
@@ -80,7 +98,7 @@ home-hub (un contenedor: frontend + backend)
    ```
 
 5. Abre:
-   - Hub: `http://localhost:8084`
+   - Dashboard: `http://localhost:8084`
    - Zigbee2MQTT: `http://<IP_DEL_SERVIDOR>:8080` (LAN, sin login)
 
 Para parar:
@@ -89,25 +107,34 @@ Para parar:
 ./stop.sh
 ```
 
-## Un solo compose
+## Dos contenedores: `web` y `api`
 
-El `docker-compose.yml` raíz levanta los tres servicios en la red por defecto
-del proyecto. No hay que crear redes externas.
+El `docker-compose.yml` raíz levanta cuatro servicios en la red por defecto del
+proyecto. No hay que crear redes externas.
 
-- `mqtt` es el nombre de servicio del broker; el hub y Z2M usan
+- `mqtt` es el nombre de servicio del broker; la API y Z2M usan
   `mqtt://mqtt:1883`.
 - Mosquitto **no publica 1883** al host.
 - Zigbee2MQTT publica 8080 en la LAN. No lo expongas a Internet: su UI no tiene
   login por defecto.
-- El hub habla directamente con el ESP32 (`ESP_HOST`), sin backend intermedio.
+- **`api` no publica puertos al host**. Solo es accesible desde la red interna
+  de Docker.
+- **`web`** (nginx) publica `8084:80`, sirve la PWA y hace proxy de `/api` y
+  `/ws` hacia `api:3000`. Es el único servicio que debe exponerse.
+- La API habla directamente con el ESP32 (`ESP_HOST`), sin backend intermedio.
+- `TRUST_PROXY=1` en `.env` para que la API vea la IP real a través de nginx.
+  Si además hay un reverse proxy externo delante de nginx, usa `2`.
 
 Operaciones individuales:
 
 ```bash
-docker compose up -d --build hub     # reconstruir solo el hub
-docker compose restart hub           # reiniciar solo el hub
-docker compose logs -f               # logs de todos
-docker compose logs -f zigbee2mqtt   # logs de Z2M
+docker compose up -d --build api web   # reconstruir API + dashboard
+docker compose restart api             # reiniciar solo la API
+docker compose restart web             # reiniciar solo nginx
+docker compose logs -f                 # logs de todos
+docker compose logs -f api             # logs de la API
+docker compose logs -f web             # logs de nginx
+docker compose logs -f zigbee2mqtt     # logs de Z2M
 ```
 
 ## Configuración sensible
@@ -158,9 +185,9 @@ luego cambia a `live`.
 
 ## Habitación / ESP32
 
-- El hub sondea `GET /api/sensors` y envía comandos IR con `GET /api/ac/set`.
+- La API sondea `GET /api/sensors` y envía comandos IR con `GET /api/ac/set`.
 - Las rutinas de clima, el temporizador y el historial viven en
-  `home-hub/server/integrations/room/`.
+  `home-hub/packages/api/server/integrations/room/`.
 - El historial está en `home-hub/data/room/sensors.db`.
 - **El estado del aire es el último comando enviado**, no una confirmación
   física: el IR es unidireccional.
@@ -179,7 +206,7 @@ cp -a /ruta/a/tu/backup/backend/data/. home-hub/data/room/
 Si ya tienes el hub funcionando, tus datos actuales están en
 `home-hub/data/room/` y no hace falta tocar nada.
 
-No ejecutes a la vez la versión antigua y el hub contra el ESP32.
+No ejecutes a la vez la versión antigua y la API contra el ESP32.
 
 ## API
 
@@ -211,22 +238,37 @@ GET  /api/health
 WS   /ws
 ```
 
+En producción, nginx sirve la PWA y reenvía `/api` y `/ws` a la API. La API no
+está publicada directamente.
+
 ## Desarrollo del hub
 
 ```bash
 cd home-hub
 npm install
-npm run dev        # backend :3000 + Vite :5173
-npm run build      # frontend a dist/web
-npm start          # backend + frontend compilado
-npm test           # tests unitarios + integración con MQTT/ESP32 simulados
-npx tsc --noEmit   # typecheck
+npm run dev        # API :3000 + Vite :5173 (proxy /api y /ws)
+npm run build      # frontend a packages/web/dist
+npm start          # solo API (:3000); el frontend se sirve con nginx o Vite
+npm test           # tests de la API con MQTT/ESP32 simulados
+npm run typecheck  # typecheck del frontend
+npm run check      # check de la API + typecheck del frontend
 ```
+
+El proyecto usa npm workspaces:
+
+```bash
+npm run dev -w @home-hub/api
+npm run dev -w @home-hub/web
+npm run test -w @home-hub/api
+```
+
+El contrato de tipos vive en `packages/contract/index.d.ts` y lo consume el
+dashboard con `import type { ... } from '@home-hub/contract'`.
 
 ## Reverse proxy
 
-El hub sirve la PWA, la API y el WebSocket en `8084` (LAN y loopback). El
-reverse proxy de `ra.luisrlp.com` debe reenviar **también `/ws`** con upgrade:
+El dashboard se publica en `8084` (LAN y loopback). El reverse proxy de
+`ra.luisrlp.com` debe reenviar **también `/ws`** con upgrade:
 
 ```nginx
 location / {
@@ -241,14 +283,15 @@ location / {
 }
 ```
 
-Con ese proxy, en `home-hub/.env` usa `COOKIE_SECURE=true` y `TRUST_PROXY=1`.
-Si el proxy reescribe el `Host`, define `ALLOWED_ORIGIN=https://ra.luisrlp.com`.
+Con ese proxy, en `home-hub/.env` usa `COOKIE_SECURE=true` y
+`TRUST_PROXY=2` (hay dos saltos: proxy externo + nginx). Si el proxy reescribe
+el `Host`, define `ALLOWED_ORIGIN=https://ra.luisrlp.com`.
 
 ## Seguridad
 
-- Solo el hub debe estar expuesto a Internet, detrás de HTTPS y login.
-- El hub (`8084`) tiene login; puedes abrirlo en la LAN. Para Internet, usa
-  Cloudflare Tunnel o un reverse proxy con HTTPS.
+- Solo el contenedor `web` (`8084`) debe estar expuesto a Internet, detrás de
+  HTTPS y login.
+- La API (`api`) no publica puertos al host; solo nginx la alcanza.
 - La UI de Zigbee2MQTT (`8080`) **no tiene login por defecto**. Queda publicada
   en la LAN para administración/pairing; no la expongas a Internet.
 - No publiques MQTT (`1883`) al exterior.

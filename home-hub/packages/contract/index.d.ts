@@ -1,3 +1,6 @@
+// Contrato compartido entre la API y el dashboard.
+// Solo tipos: no genera código en runtime.
+
 export type DeviceKind = 'relay' | 'sensor' | 'button';
 
 export interface ZigbeeDevice {

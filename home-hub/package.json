@@ -2,37 +2,21 @@
   "name": "home-hub",
   "version": "1.0.0",
   "private": true,
-  "description": "Dashboard unificado para Zigbee2MQTT y la habitación (ESP32)",
+  "description": "Hub unificado para Zigbee2MQTT y la habitación (ESP32)",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "concurrently -k -n server,web -c blue,green \"npm:dev:server\" \"npm:dev:web\"",
-    "dev:server": "node --watch server/index.js",
-    "dev:web": "vite",
-    "build": "vite build",
-    "start": "node server/index.js",
-    "test": "node --test test/*.test.js",
-    "check": "node --check server/index.js"
-  },
-  "dependencies": {
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "mqtt": "^5.10.1",
-    "sql.js": "^1.12.0",
-    "ws": "^8.18.0",
-    "yaml": "^2.6.1"
+    "dev": "concurrently -k -n api,web -c blue,green \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "npm run dev -w @home-hub/api",
+    "dev:web": "npm run dev -w @home-hub/web",
+    "build": "npm run build -w @home-hub/web",
+    "start": "npm run start -w @home-hub/api",
+    "test": "npm run test -w @home-hub/api",
+    "typecheck": "npm run typecheck -w @home-hub/web",
+    "check": "npm run check -w @home-hub/api && npm run typecheck -w @home-hub/web"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.3.3",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.3.4",
-    "aedes": "^1.2.0",
-    "chart.js": "^4.4.7",
-    "concurrently": "^9.1.2",
-    "react": "^18.3.1",
-    "react-chartjs-2": "^5.3.0",
-    "react-dom": "^18.3.1",
-    "tailwindcss": "^4.3.3",
-    "typescript": "^5.7.2",
-    "vite": "^6.0.7"
+    "concurrently": "^9.1.2"
   }
 }

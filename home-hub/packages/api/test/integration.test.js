@@ -19,7 +19,7 @@ process.env.DASHBOARD_PASSWORD = 'test1234';
 process.env.SESSION_SECRET = 'test-secret';
 process.env.AUTH_DISABLED = '0';
 process.env.AUTOMATION_MODE = 'live';
-process.env.AUTOMATIONS_FILE = path.join(__dirname, '../config/automations.example.yaml');
+process.env.AUTOMATIONS_FILE = path.join(__dirname, '../../../config/automations.example.yaml');
 process.env.CLIMATE_TZ = 'America/Mexico_City';
 process.env.LOG_LEVEL = 'error';
 

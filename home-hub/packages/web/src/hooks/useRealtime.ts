@@ -6,7 +6,7 @@ import type {
   HubSnapshot,
   RoomStatus,
   ZigbeeDevice,
-} from '../lib/types';
+} from '@home-hub/contract';
 
 function toDeviceMap(devices: ZigbeeDevice[]): Record<string, ZigbeeDevice> {
   return Object.fromEntries(devices.map((device) => [device.ieee, device]));

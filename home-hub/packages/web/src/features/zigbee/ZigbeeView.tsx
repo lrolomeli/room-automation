@@ -3,7 +3,7 @@ import Card from '../../components/ui/Card';
 import Banner from '../../components/ui/Banner';
 import Switch from '../../components/ui/Switch';
 import { api } from '../../lib/api';
-import type { AutomationStatus, Bridge, ZigbeeDevice } from '../../lib/types';
+import type { AutomationStatus, Bridge, ZigbeeDevice } from '@home-hub/contract';
 
 function formatWhen(value?: string | null) {
   if (!value) return '—';

@@ -1,6 +1,10 @@
-require('dotenv').config();
-
 const path = require('path');
+
+// Raíz del proyecto home-hub: packages/api/server -> packages/api -> packages -> home-hub
+const rootDir = path.join(__dirname, '../../..');
+
+// Carga home-hub/.env aunque el script se ejecute desde packages/api.
+require('dotenv').config({ path: path.join(rootDir, '.env') });
 
 const config = {
   port: Number(process.env.PORT) || 3000,
@@ -17,12 +21,12 @@ const config = {
   cookieSecure: process.env.COOKIE_SECURE === 'true',
   authDisabled: process.env.AUTH_DISABLED === '1',
   allowedOrigin: process.env.ALLOWED_ORIGIN || '',
-  trustProxy: process.env.TRUST_PROXY === '1',
+  trustProxy: Number(process.env.TRUST_PROXY) || 0,
 
-  dataDir: process.env.DATA_DIR || path.join(__dirname, '../data'),
+  dataDir: process.env.DATA_DIR || path.join(rootDir, 'data'),
   automationMode: process.env.AUTOMATION_MODE || 'shadow',
   automationModeOverride: process.env.AUTOMATION_MODE || '',
-  automationsFile: process.env.AUTOMATIONS_FILE || path.join(__dirname, '../config/automations.yaml'),
+  automationsFile: process.env.AUTOMATIONS_FILE || path.join(rootDir, 'config/automations.yaml'),
 
   espHost: process.env.ESP_HOST || '',
   espPort: Number(process.env.ESP_PORT) || 80,

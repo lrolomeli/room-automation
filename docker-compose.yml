@@ -35,16 +35,17 @@ services:
       mqtt:
         condition: service_healthy
 
-  hub:
-    build: ./home-hub
-    container_name: home-hub
+  api:
+    build:
+      context: ./home-hub
+      dockerfile: Dockerfile.api
+    container_name: home-hub-api
     restart: unless-stopped
     env_file:
       - ./home-hub/.env
-    ports:
-      # Hub accesible en la LAN (con login). El reverse proxy de
-      # ra.luisrlp.com también puede entrar por 127.0.0.1:8084.
-      - "8084:3000"
+    # Solo accesible desde la red interna de Docker (nginx hace de proxy).
+    expose:
+      - "3000"
     volumes:
       - ./home-hub/data:/app/data
       # Reglas editables sin reconstruir la imagen.
@@ -56,3 +57,24 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+      start_period: 10s
+
+  web:
+    build:
+      context: ./home-hub
+      dockerfile: Dockerfile.web
+    container_name: home-hub-web
+    restart: unless-stopped
+    ports:
+      # Dashboard público (con login). El reverse proxy de
+      # ra.luisrlp.com también puede entrar por 127.0.0.1:8084.
+      - "8084:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s

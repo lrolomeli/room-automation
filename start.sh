@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 #
-# Arranca el stack completo: Mosquitto + Zigbee2MQTT + home-hub.
+# Arranca el stack completo: Mosquitto + Zigbee2MQTT + API + dashboard.
 # Requiere haber creado home-hub/.env a partir de home-hub/.env.example.
 #
 # Uso:
 #   ./start.sh            # stack completo
-#   ./start.sh --hub-only # solo el hub (sin dongle / sin MQTT)
+#   ./start.sh --hub-only # solo API + dashboard (sin dongle / sin MQTT)
 #
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT_DIR"
 
-LAN_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+LAN_IP="$(hostname -I 2>/dev/null | awk '{print $1}')" || true
 
 HUB_ONLY=0
 if [ "${1:-}" = "--hub-only" ]; then
@@ -38,7 +38,7 @@ if [ "$HUB_ONLY" = "0" ]; then
   if [ ! -e /dev/ttyUSB0 ]; then
     echo "Error: no se encontró /dev/ttyUSB0." >&2
     echo "Conecta el dongle Zigbee o ajusta el device en docker-compose.yml." >&2
-    echo "Para arrancar solo el hub: ./start.sh --hub-only" >&2
+    echo "Para arrancar solo el dashboard: ./start.sh --hub-only" >&2
     exit 1
   fi
 
@@ -61,17 +61,17 @@ if [ "$HUB_ONLY" = "0" ]; then
   $COMPOSE up -d --build
 else
   echo "Modo --hub-only: se omite Mosquitto/Zigbee2MQTT. MQTT aparecerá desconectado."
-  $COMPOSE up -d --build --no-deps hub
+  $COMPOSE up -d --build --no-deps api web
 fi
 
 echo
 echo "Listo."
-echo "  Hub local:    http://localhost:8084"
+echo "  Dashboard local: http://localhost:8084"
 if [ -n "$LAN_IP" ]; then
-  echo "  Hub LAN:      http://$LAN_IP:8084"
+  echo "  Dashboard LAN:   http://$LAN_IP:8084"
 fi
 if [ "$HUB_ONLY" = "0" ]; then
   echo "  Zigbee2MQTT:  http://localhost:8080${LAN_IP:+  |  http://$LAN_IP:8080}"
 fi
 echo
-echo "Producción: publica el hub detrás de tu reverse proxy HTTPS en ra.luisrlp.com."
+echo "Producción: publica el dashboard detrás de tu reverse proxy HTTPS en ra.luisrlp.com."

@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const path = require('path');
 
 process.env.AUTOMATION_MODE = 'shadow';
-process.env.AUTOMATIONS_FILE = path.join(__dirname, '../config/automations.example.yaml');
+process.env.AUTOMATIONS_FILE = path.join(__dirname, '../../../config/automations.example.yaml');
 
 const bus = require('../server/bus');
 const registry = require('../server/integrations/zigbee/registry');

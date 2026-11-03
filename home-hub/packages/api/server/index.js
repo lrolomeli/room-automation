@@ -1,5 +1,3 @@
-const path = require('path');
-const fs = require('fs');
 const http = require('http');
 
 const config = require('./config');
@@ -29,7 +27,7 @@ const automations = require('./integrations/zigbee/automations');
 const room = require('./integrations/room');
 
 if (!config.authDisabled && (!config.dashboardPassword || !config.sessionSecret)) {
-  logger.error('Faltan DASHBOARD_PASSWORD y/o SESSION_SECRET. El hub no arranca.');
+  logger.error('Faltan DASHBOARD_PASSWORD y/o SESSION_SECRET. La API no arranca.');
   logger.error('Copia home-hub/.env.example a home-hub/.env y define valores seguros.');
   process.exit(1);
 }
@@ -47,7 +45,7 @@ if (
 
 const app = express();
 app.disable('x-powered-by');
-if (config.trustProxy) app.set('trust proxy', 1);
+if (config.trustProxy) app.set('trust proxy', config.trustProxy);
 app.use(auth.securityHeaders);
 app.use(express.json({ limit: '2mb' }));
 app.use(auth.originGuard);
@@ -60,18 +58,9 @@ app.use('/api/zigbee', zigbeeRoutes);
 app.use('/api/room', roomRoutes);
 app.use('/api/automations', automationsRoutes);
 
-const webDist = path.join(__dirname, '../dist/web');
-if (fs.existsSync(webDist)) {
-  app.use(express.static(webDist, { index: false, maxAge: '1h' }));
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path.startsWith('/ws')) return next();
-    return res.sendFile(path.join(webDist, 'index.html'));
-  });
-} else {
-  app.get('/', (req, res) => {
-    res.status(200).send('home-hub API. Ejecuta "npm run build" para generar el frontend.');
-  });
-}
+app.get('/', (req, res) => {
+  res.status(200).json({ name: 'home-hub-api', status: 'ok' });
+});
 
 app.use((req, res) => {
   if (req.path.startsWith('/api')) return res.status(404).json({ error: 'Not found' });

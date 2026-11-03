@@ -1,0 +1,29 @@
+# syntax=docker/dockerfile:1
+
+# Imagen solo API: sin frontend, sin build de Vite.
+FROM node:24-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY packages/api/package.json packages/api/
+COPY packages/web/package.json packages/web/
+COPY packages/contract/package.json packages/contract/
+RUN npm ci --omit=dev && npm cache clean --force
+
+FROM node:24-alpine AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json package-lock.json ./
+COPY packages/api/package.json packages/api/
+COPY packages/api/server ./packages/api/server
+COPY config ./config
+
+RUN mkdir -p /app/data && chown -R node:node /app
+USER node
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1
+
+CMD ["node", "packages/api/server/index.js"]

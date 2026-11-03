@@ -1,0 +1,15 @@
+{
+  "name": "@home-hub/contract",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tipos compartidos entre la API y el dashboard",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts"
+    }
+  },
+  "files": [
+    "index.d.ts"
+  ]
+}

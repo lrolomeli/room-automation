@@ -1,0 +1,24 @@
+# syntax=docker/dockerfile:1
+
+# Etapa de build: compila el dashboard con Vite.
+FROM node:24-alpine AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY packages/api/package.json packages/api/
+COPY packages/web/package.json packages/web/
+COPY packages/contract/package.json packages/contract/
+RUN npm ci && npm cache clean --force
+
+COPY packages/contract ./packages/contract
+COPY packages/web ./packages/web
+RUN npm run build -w @home-hub/web
+
+# Etapa final: nginx sirve estáticos y hace proxy de /api y /ws.
+FROM nginx:alpine AS runtime
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/packages/web/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget -qO- http://127.0.0.1/ >/dev/null || exit 1
